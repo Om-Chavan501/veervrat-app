@@ -395,6 +395,15 @@ export async function completeJourneyAction(journeyId: string) {
     throw new Error("Can only complete active journeys");
   }
 
+  // Check if at least one reflection exists
+  const reflectionCount = await prisma.dailyReflection.count({
+    where: { journeyId },
+  });
+
+  if (reflectionCount === 0) {
+    throw new Error("Cannot complete journey without at least one reflection");
+  }
+
   const updated = await prisma.sentenceJourney.update({
     where: { id: journeyId },
     data: {

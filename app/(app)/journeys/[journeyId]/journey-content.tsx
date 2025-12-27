@@ -46,9 +46,11 @@ interface Journey {
 export function JourneyContent({
   journey,
   userId,
+  reflectionsCount = 0,
 }: {
   journey: Journey;
   userId: string;
+  reflectionsCount?: number;
 }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -256,7 +258,7 @@ export function JourneyContent({
       )}
 
       {/* State Actions */}
-      <section className="flex gap-4 justify-center">
+      <section className="flex flex-col gap-4 justify-center">
         {journey.state === "ACTIVE" && (
           <>
             <button
@@ -266,13 +268,25 @@ export function JourneyContent({
             >
               {isLoading ? "Pausing..." : "Pause Journey"}
             </button>
-            <button
-              onClick={handleComplete}
-              disabled={isLoading}
-              className="px-6 py-3 border border-green-600 text-green-600 rounded font-medium hover:bg-green-50 transition disabled:opacity-50"
-            >
-              {isLoading ? "Completing..." : "Mark as Completed"}
-            </button>
+            
+            {reflectionsCount === 0 ? (
+              <div className="bg-amber-50 border border-amber-200 rounded p-4">
+                <p className="text-sm text-amber-800 font-medium mb-2">
+                  Log a reflection before completing
+                </p>
+                <p className="text-xs text-amber-700">
+                  You need at least one reflection to mark this journey as complete.
+                </p>
+              </div>
+            ) : (
+              <button
+                onClick={handleComplete}
+                disabled={isLoading}
+                className="px-6 py-3 border border-green-600 text-green-600 rounded font-medium hover:bg-green-50 transition disabled:opacity-50"
+              >
+                {isLoading ? "Completing..." : "Mark as Completed"}
+              </button>
+            )}
           </>
         )}
 

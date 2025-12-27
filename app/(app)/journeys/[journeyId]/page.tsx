@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { JourneyContent } from "./journey-content";
+import { ReflectionForm } from "./reflection-form";
+import { ReflectionHistory } from "./reflection-history";
+import { getTodayReflectionAction, getReflectionsAction } from "@/app/actions/reflection";
 
 interface JourneyPageProps {
   params: Promise<{ journeyId: string }>;
@@ -53,6 +56,10 @@ export default async function JourneyPage(props: JourneyPageProps) {
     redirect("/dashboard");
   }
 
+  // Get reflections for this journey
+  const reflections = await getReflectionsAction(journey.id);
+  const todayReflection = await getTodayReflectionAction(journey.id);
+
   const statusColor =
     journey.state === "ACTIVE"
       ? "bg-green-100 text-green-800"
@@ -83,13 +90,45 @@ export default async function JourneyPage(props: JourneyPageProps) {
           <span className="font-medium">{journey.sentence.subVirtue.nameEn}</span>
           {" • "}
           Started {journey.createdAt.toLocaleDateString()}
+          {reflections.length > 0 && ` • ${reflections.length} reflection${reflections.length !== 1 ? "s" : ""}`}
         </p>
       </div>
 
       <JourneyContent
         journey={journey}
         userId={session.userId}
+        reflectionsCount={reflections.length}
       />
+
+      {/* Reflection Section */}
+      <section className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-2">
+            Today's Reflection
+          </h3>
+          <p className="text-sm text-gray-600">
+            {journey.state === "ACTIVE"
+              ? "Log your practice and insights from today."
+              : "Journey is not active. Reflections are locked."}
+          </p>
+        </div>
+
+        <div className="mb-8">
+          <ReflectionForm
+            journeyId={journey.id}
+            existingReflection={todayReflection || undefined}
+            journeyState={journey.state}
+          />
+        </div>
+
+        {/* Reflection History */}
+        <div>
+          <h4 className="text-base font-bold text-gray-900 mb-4">
+            Reflection History
+          </h4>
+          <ReflectionHistory reflections={reflections} />
+        </div>
+      </section>
 
       {/* Back Button */}
       <div className="mt-8">
