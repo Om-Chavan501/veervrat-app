@@ -46,11 +46,12 @@ enum IrrationalBelief {
 //////////////////////
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String?  @unique
-  phone     String?  @unique
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  name         String
+  email        String?  @unique
+  phone        String?  @unique
+  passwordHash String?
+  createdAt    DateTime @default(now())
 
   shortlistSessions LacunaShortlistSession[]
   assessments       LacunaAssessment[]
