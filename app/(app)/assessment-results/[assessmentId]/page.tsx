@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { createOrLinkJourneyAction } from "@/app/actions/journey";
 
 interface AssessmentResultsPageProps {
   params: Promise<{ assessmentId: string }>;
@@ -111,15 +112,14 @@ export default async function AssessmentResultsPage(
         </div>
       </section>
 
-      {/* Suggested Sentences */}
+      {/* Suggested Sentences with Selection */}
       {assessment.suggestions.length > 0 && (
         <section className="mb-8">
           <h3 className="text-lg font-bold text-gray-900 mb-4">
             Suggested Areas for Development
           </h3>
           <p className="text-gray-600 mb-4">
-            Based on your responses, these sentences are recommended for your
-            growth work:
+            Select a sentence to begin your journey of growth. You can work on one at a time or return to this assessment to select others later.
           </p>
 
           <div className="space-y-4">
@@ -139,13 +139,30 @@ export default async function AssessmentResultsPage(
                     <p className="text-sm text-gray-600 mb-2">
                       {suggestion.sentence.textMr}
                     </p>
-                    <p className="text-xs text-gray-700 bg-white px-2 py-1 rounded inline-block">
+                    <p className="text-xs text-gray-700 bg-white px-2 py-1 rounded inline-block mb-3">
                       <span className="font-medium">
                         {suggestion.sentence.subVirtue.nameEn}
                       </span>
                       {" • "}
                       {suggestion.reason}
                     </p>
+                    
+                    <form
+                      action={async () => {
+                        "use server";
+                        await createOrLinkJourneyAction(
+                          assessment.id,
+                          suggestion.sentenceId
+                        );
+                      }}
+                    >
+                      <button
+                        type="submit"
+                        className="text-sm bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-medium"
+                      >
+                        Select & Begin Journey
+                      </button>
+                    </form>
                   </div>
                 </div>
               </div>
@@ -163,32 +180,56 @@ export default async function AssessmentResultsPage(
         </section>
       )}
 
-      {/* Response Breakdown */}
+      {/* All Responses */}
       <section className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
         <h3 className="text-lg font-bold text-gray-900 mb-4">All Responses</h3>
         <div className="space-y-3">
           {assessment.responses.map((response) => (
-            <div key={response.id} className="border border-gray-200 rounded p-3">
-              <p className="text-sm text-gray-800 font-medium mb-1">
-                {response.sentence.textEn}
-              </p>
-              <div className="flex justify-between items-center">
-                <p className="text-xs text-gray-600">
-                  {response.sentence.subVirtue.nameEn}
-                </p>
-                <span
-                  className={`text-xs font-bold px-2 py-1 rounded ${
-                    response.rating === "ALWAYS"
-                      ? "bg-green-100 text-green-800"
-                      : response.rating === "OFTEN"
-                      ? "bg-blue-100 text-blue-800"
-                      : response.rating === "RARELY"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-red-100 text-red-800"
-                  }`}
+            <div key={response.id} className="border border-gray-200 rounded p-4">
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-800 font-medium mb-1">
+                    {response.sentence.textEn}
+                  </p>
+                  <p className="text-xs text-gray-600 mb-2">
+                    {response.sentence.textMr}
+                  </p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-gray-600">
+                      {response.sentence.subVirtue.nameEn}
+                    </p>
+                    <span
+                      className={`text-xs font-bold px-2 py-1 rounded ${
+                        response.rating === "ALWAYS"
+                          ? "bg-green-100 text-green-800"
+                          : response.rating === "OFTEN"
+                          ? "bg-blue-100 text-blue-800"
+                          : response.rating === "RARELY"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {response.rating}
+                    </span>
+                  </div>
+                </div>
+                <form
+                  action={async () => {
+                    "use server";
+                    await createOrLinkJourneyAction(
+                      assessment.id,
+                      response.sentenceId
+                    );
+                  }}
+                  className="flex-shrink-0"
                 >
-                  {response.rating}
-                </span>
+                  <button
+                    type="submit"
+                    className="text-sm bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-medium whitespace-nowrap"
+                  >
+                    Start Journey
+                  </button>
+                </form>
               </div>
             </div>
           ))}

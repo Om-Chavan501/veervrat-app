@@ -22,14 +22,122 @@ export default async function DashboardPage() {
   const activeAssessments = assessments.filter((a) => a.status === "IN_PROGRESS");
   const completedAssessments = assessments.filter((a) => a.status === "COMPLETED");
 
+  // Get user's journeys
+  const journeys = await prisma.sentenceJourney.findMany({
+    where: { userId: session.userId },
+    include: {
+      sentence: {
+        include: {
+          subVirtue: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+  });
+
+  const activeJourneys = journeys.filter((j) => j.state === "ACTIVE");
+  const inactiveJourneys = journeys.filter((j) => j.state === "INACTIVE");
+  const completedJourneys = journeys.filter((j) => j.state === "COMPLETED");
+
   return (
     <div>
       <h2 className="text-3xl font-bold text-gray-900 mb-8">Dashboard</h2>
 
+      {/* Active Journeys */}
+      {activeJourneys.length > 0 && (
+        <section className="mb-8">
+          <h3 className="text-xl font-bold text-gray-800 mb-4">Active Journeys</h3>
+          <div className="space-y-3">
+            {activeJourneys.map((journey) => (
+              <Link
+                key={journey.id}
+                href={`/journeys/${journey.id}`}
+                className="block bg-green-50 rounded-lg border border-green-200 p-4 hover:border-green-400 transition"
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h4 className="font-bold text-gray-900">
+                      {journey.sentence.textEn}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {journey.sentence.subVirtue.nameEn}
+                    </p>
+                  </div>
+                  <span className="text-sm text-green-700 font-medium">
+                    Continue →
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Inactive Journeys */}
+      {inactiveJourneys.length > 0 && (
+        <section className="mb-8">
+          <h3 className="text-xl font-bold text-gray-800 mb-4">Paused Journeys</h3>
+          <div className="space-y-3">
+            {inactiveJourneys.map((journey) => (
+              <Link
+                key={journey.id}
+                href={`/journeys/${journey.id}`}
+                className="block bg-gray-50 rounded-lg border border-gray-200 p-4 hover:border-gray-400 transition"
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h4 className="font-bold text-gray-900">
+                      {journey.sentence.textEn}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {journey.sentence.subVirtue.nameEn}
+                    </p>
+                  </div>
+                  <span className="text-sm text-gray-700 font-medium">
+                    Resume →
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Completed Journeys */}
+      {completedJourneys.length > 0 && (
+        <section className="mb-8">
+          <h3 className="text-xl font-bold text-gray-800 mb-4">Completed Journeys</h3>
+          <div className="space-y-3">
+            {completedJourneys.map((journey) => (
+              <Link
+                key={journey.id}
+                href={`/journeys/${journey.id}`}
+                className="block bg-blue-50 rounded-lg border border-blue-200 p-4 hover:border-blue-400 transition"
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h4 className="font-bold text-gray-900">
+                      {journey.sentence.textEn}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {journey.sentence.subVirtue.nameEn}
+                    </p>
+                  </div>
+                  <span className="text-sm text-blue-700 font-medium">
+                    View →
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Active Assessments */}
       {activeAssessments.length > 0 && (
         <section className="mb-8">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">In Progress</h3>
+          <h3 className="text-xl font-bold text-gray-800 mb-4">In Progress Assessments</h3>
           <div className="space-y-3">
             {activeAssessments.map((assessment) => (
               <Link
