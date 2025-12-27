@@ -12,3 +12,278 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+//////////////////////
+// ENUMS
+//////////////////////
+
+enum JourneyState {
+  ACTIVE
+  INACTIVE
+  COMPLETED
+}
+
+enum AssessmentStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum Rating {
+  ALWAYS
+  OFTEN
+  RARELY
+  NEVER
+}
+
+enum IrrationalBelief {
+  MUST_BE_LOVED
+  MUST_BE_COMPETENT
+  MUST_HAVE_COMFORT
+}
+
+//////////////////////
+// CORE USER
+//////////////////////
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String?  @unique
+  phone     String?  @unique
+  createdAt DateTime @default(now())
+
+  shortlistSessions LacunaShortlistSession[]
+  assessments       LacunaAssessment[]
+  journeys          SentenceJourney[]
+}
+
+//////////////////////
+// ONTOLOGY (STATIC)
+//////////////////////
+
+model Lacuna {
+  id      String @id @default(uuid())
+  nameEn  String @unique
+  nameMr  String 
+
+  assessments LacunaAssessment[]
+
+  lacunaShortlistItems LacunaShortlistItem[]
+
+  lacunaSubVirtues LacunaSubVirtue[]
+}
+
+model LacunaSubVirtue {
+  id          String   @id @default(uuid())
+  lacunaId    String
+  subVirtueId String
+  priority    Int
+
+  lacuna      Lacuna    @relation(fields: [lacunaId], references: [id])
+  subVirtue   SubVirtue @relation(fields: [subVirtueId], references: [id])
+
+  @@unique([lacunaId, subVirtueId])
+}
+
+model Virtue {
+  id      String @id @default(uuid())
+  nameEn  String @unique
+  nameMr  String 
+
+  subVirtues SubVirtue[]
+}
+
+model SubVirtue {
+  id        String @id @default(uuid())
+  nameEn    String @unique
+  nameMr    String 
+
+  virtueId  String
+  virtue    Virtue @relation(fields: [virtueId], references: [id])
+
+  sentences Sentence[]
+
+  lacunaSubVirtues LacunaSubVirtue[]
+}
+
+model Sentence {
+  id          String @id @default(uuid())
+  textEn      String @unique
+  textMr      String
+
+  subVirtueId String
+  subVirtue   SubVirtue @relation(fields: [subVirtueId], references: [id])
+
+  assessmentResponses AssessmentResponse[]
+  suggestedSnapshots  SuggestedSentenceSnapshot[]
+  journeys             SentenceJourney[]
+}
+
+//////////////////////
+// LACUNA SHORTLISTING
+//////////////////////
+
+model LacunaShortlistSession {
+  id        String   @id @default(uuid())
+  userId    String
+  note      String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  items     LacunaShortlistItem[]
+
+  lacunaAssessments LacunaAssessment[]
+}
+
+model LacunaShortlistItem {
+  id         String @id @default(uuid())
+  sessionId String
+  lacunaId  String
+  rank      Int
+
+  session   LacunaShortlistSession @relation(fields: [sessionId], references: [id])
+  lacuna    Lacuna                 @relation(fields: [lacunaId], references: [id])
+
+  @@unique([sessionId, lacunaId])
+}
+
+//////////////////////
+// LACUNA ASSESSMENT (TEST)
+//////////////////////
+
+model LacunaAssessment {
+  id          String           @id @default(uuid())
+  userId      String
+  lacunaId    String
+
+  status      AssessmentStatus
+  startedAt   DateTime         @default(now())
+  completedAt DateTime?
+
+  shortlistSessionId String?
+  shortlistSession   LacunaShortlistSession? @relation(fields: [shortlistSessionId], references: [id])
+
+  user        User             @relation(fields: [userId], references: [id])
+  lacuna      Lacuna           @relation(fields: [lacunaId], references: [id])
+
+  responses   AssessmentResponse[]
+  suggestions SuggestedSentenceSnapshot[]
+  links       SentenceJourneyAssessmentLink[]
+}
+
+//////////////////////
+// ASSESSMENT RESPONSES
+//////////////////////
+
+model AssessmentResponse {
+  id            String           @id @default(uuid())
+  assessmentId  String
+  sentenceId    String
+  rating        Rating
+  answeredAt    DateTime         @default(now())
+
+  assessment    LacunaAssessment @relation(fields: [assessmentId], references: [id])
+  sentence      Sentence         @relation(fields: [sentenceId], references: [id])
+
+  @@unique([assessmentId, sentenceId])
+}
+
+//////////////////////
+// SUGGESTED SENTENCES (SNAPSHOT)
+//////////////////////
+
+model SuggestedSentenceSnapshot {
+  id            String           @id @default(uuid())
+  assessmentId  String
+  sentenceId    String
+  priorityRank  Int
+  reason        String
+
+  assessment    LacunaAssessment @relation(fields: [assessmentId], references: [id])
+  sentence      Sentence         @relation(fields: [sentenceId], references: [id])
+
+  @@unique([assessmentId, sentenceId])
+}
+
+//////////////////////
+// SENTENCE JOURNEY (CORE)
+//////////////////////
+
+model SentenceJourney {
+  id              String        @id @default(uuid())
+  userId          String
+  sentenceId      String
+  state           JourneyState
+  createdAt       DateTime      @default(now())
+  inactiveAt      DateTime?
+  inactiveReason  String?
+
+  user            User          @relation(fields: [userId], references: [id])
+  sentence        Sentence      @relation(fields: [sentenceId], references: [id])
+
+  links           SentenceJourneyAssessmentLink[]
+  resolutions     ResolutionInstance[]
+  reflections     DailyReflection[]
+
+  @@unique([userId, sentenceId])
+}
+
+//////////////////////
+// JOURNEY ↔ ASSESSMENT CONTEXT + CLARIFICATION
+//////////////////////
+
+model SentenceJourneyAssessmentLink {
+  id                   String           @id @default(uuid())
+  journeyId            String
+  assessmentId         String
+
+  // Clarification (per lacuna context)
+  virtueRelationNote   String?
+  lacunaReductionNote  String
+  unifiedInsightNote   String
+  personalContextNote  String
+  irrationalBelief     IrrationalBelief
+
+  createdAt            DateTime         @default(now())
+
+  journey              SentenceJourney  @relation(fields: [journeyId], references: [id])
+  assessment           LacunaAssessment @relation(fields: [assessmentId], references: [id])
+
+  @@unique([journeyId, assessmentId])
+}
+
+//////////////////////
+// RESOLUTIONS
+//////////////////////
+
+model ResolutionInstance {
+  id         String   @id @default(uuid())
+  journeyId  String
+
+  text       String
+  frequency  String
+  createdAt  DateTime @default(now())
+
+  journey    SentenceJourney @relation(fields: [journeyId], references: [id])
+}
+
+//////////////////////
+// DAILY REFLECTIONS
+//////////////////////
+
+model DailyReflection {
+  id           String   @id @default(uuid())
+  journeyId    String
+  date         DateTime
+
+  applied      Boolean
+  contextNote  String?
+  insightNote  String?
+  difficulty   Int?
+
+  createdAt    DateTime @default(now())
+
+  journey      SentenceJourney @relation(fields: [journeyId], references: [id])
+
+  @@unique([journeyId, date])
+}
