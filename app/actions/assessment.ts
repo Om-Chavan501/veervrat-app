@@ -201,6 +201,7 @@ export async function completeAssessmentAction(assessmentId: string) {
 /**
  * Get assessment details for display
  * - Includes lacuna info, subvirtues, sentences, and existing responses
+ * - Also includes previous responses for each sentence from completed assessments
  */
 export async function getAssessmentDetailsAction(assessmentId: string) {
   const session = await getSession();
@@ -242,5 +243,49 @@ export async function getAssessmentDetailsAction(assessmentId: string) {
     throw new Error("Unauthorized");
   }
 
-  return assessment;
+  // Fetch previous responses for each sentence
+  const allSentenceIds = assessment.lacuna.lacunaSubVirtues.flatMap((lsv) =>
+    lsv.subVirtue.sentences.map((s) => s.id)
+  );
+
+  const previousResponses = await prisma.assessmentResponse.findMany({
+    where: {
+      sentenceId: {
+        in: allSentenceIds,
+      },
+      assessment: {
+        userId: session.userId,
+        status: "COMPLETED",
+        id: {
+          not: assessmentId,
+        },
+      },
+    },
+    include: {
+      assessment: {
+        include: {
+          lacuna: true,
+        },
+      },
+    },
+    orderBy: {
+      assessment: {
+        completedAt: "desc",
+      },
+    },
+  });
+
+  // Group previous responses by sentence ID
+  const previousResponsesBysentenceId = new Map<string, typeof previousResponses>();
+  previousResponses.forEach((response) => {
+    if (!previousResponsesBysentenceId.has(response.sentenceId)) {
+      previousResponsesBysentenceId.set(response.sentenceId, []);
+    }
+    previousResponsesBysentenceId.get(response.sentenceId)!.push(response);
+  });
+
+  return {
+    ...assessment,
+    previousResponsesBysentenceId,
+  };
 }
