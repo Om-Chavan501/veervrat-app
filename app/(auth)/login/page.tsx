@@ -32,7 +32,10 @@ export default async function LoginPage(props: LoginPageProps) {
 
         <form action={loginAction} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Email
             </label>
             <input
@@ -40,13 +43,18 @@ export default async function LoginPage(props: LoginPageProps) {
               id="email"
               name="email"
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg
+                         focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                         text-gray-900 placeholder-gray-400"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Password
             </label>
             <input
@@ -54,7 +62,9 @@ export default async function LoginPage(props: LoginPageProps) {
               id="password"
               name="password"
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg
+                         focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                         text-gray-900 placeholder-gray-400"
               placeholder="••••••••"
             />
           </div>
@@ -69,7 +79,10 @@ export default async function LoginPage(props: LoginPageProps) {
 
         <p className="mt-4 text-center text-sm text-gray-600">
           Don't have an account?{" "}
-          <Link href="/register" className="text-blue-600 hover:underline font-medium">
+          <Link
+            href="/register"
+            className="text-blue-600 hover:underline font-medium"
+          >
             Register
           </Link>
         </p>
