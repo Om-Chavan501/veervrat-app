@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { LacunaCategory } from "@/generated/prisma/enums";
-import { Lacuna, LacunaShortlistItem } from "@/generated/prisma";
+import { Lacuna, LacunaShortlistItem } from "@/generated/prisma.";
 import {
   addToShortlistAction,
   removeFromShortlistAction,

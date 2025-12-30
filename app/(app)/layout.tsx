@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/actions/auth";
+import Link from 'next/link';
 
 export default async function AppLayout({
   children,
@@ -18,10 +19,9 @@ export default async function AppLayout({
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-gray-900">Veervrat</h1>
-          </div>
-
+          <Link href="/dashboard" className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
+            Veervrat
+          </Link>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">
               Welcome, <span className="font-medium text-gray-900">{session.name}</span>
