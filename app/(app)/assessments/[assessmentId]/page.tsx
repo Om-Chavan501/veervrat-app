@@ -6,6 +6,7 @@ import {
   getAssessmentDetailsAction,
   saveResponseAction,
   completeAssessmentAction,
+  deleteResponseAction,
 } from "@/app/actions/assessment";
 import type { Rating } from "@/generated/prisma/enums";
 
@@ -74,8 +75,21 @@ export default function AssessmentPage(props: AssessmentPageProps) {
   const handleRating = async (sentenceId: string, rating: Rating) => {
     try {
       setSaving(true);
-      await saveResponseAction(params!.assessmentId, sentenceId, rating);
-      setCurrentRatings((prev) => new Map(prev).set(sentenceId, rating));
+      const currentRating = currentRatings.get(sentenceId);
+
+      // If clicking the same rating, deselect it
+      if (currentRating === rating) {
+        await deleteResponseAction(params!.assessmentId, sentenceId);
+        setCurrentRatings((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(sentenceId);
+          return newMap;
+        });
+      } else {
+        // Otherwise, save the new rating
+        await saveResponseAction(params!.assessmentId, sentenceId, rating);
+        setCurrentRatings((prev) => new Map(prev).set(sentenceId, rating));
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to save response"

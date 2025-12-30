@@ -97,6 +97,50 @@ export async function saveResponseAction(
 }
 
 /**
+ * Delete a response for a sentence in an assessment (unselect)
+ * - User must own the assessment
+ * - Assessment must be IN_PROGRESS
+ */
+export async function deleteResponseAction(
+  assessmentId: string,
+  sentenceId: string
+) {
+  const session = await getSession();
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  // Verify ownership and status
+  const assessment = await prisma.lacunaAssessment.findUnique({
+    where: { id: assessmentId },
+  });
+
+  if (!assessment) {
+    throw new Error("Assessment not found");
+  }
+
+  if (assessment.userId !== session.userId) {
+    throw new Error("Unauthorized");
+  }
+
+  if (assessment.status !== AssessmentStatus.IN_PROGRESS) {
+    throw new Error("Cannot modify a completed assessment");
+  }
+
+  // Delete the response
+  await prisma.assessmentResponse.delete({
+    where: {
+      assessmentId_sentenceId: {
+        assessmentId,
+        sentenceId,
+      },
+    },
+  });
+
+  return { success: true };
+}
+
+/**
  * Generate suggestions based on assessment responses
  * - Collect sentences rated RARELY or NEVER
  * - Order by lacuna → subvirtue priority
