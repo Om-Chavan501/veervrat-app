@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import csv from "csv-parser";
 import { prisma } from "../lib/prisma";
+import { LacunaCategory } from "@prisma/client";
 
 function readCSV(fileName: string): Promise<any[]> {
   const filePath = path.join(process.cwd(), "prisma/data", fileName);
@@ -88,16 +89,29 @@ async function seedLacunae() {
   const rows = await readCSV("lacunae.csv");
 
   for (const r of rows) {
+    const category = r.category as LacunaCategory;
+
+    if (!["A", "B", "C"].includes(category)) {
+      throw new Error(
+        `Invalid category for lacuna ${r.name_en}: ${r.category}`
+      );
+    }
+
     await prisma.lacuna.upsert({
       where: { nameEn: r.name_en },
-      update: { nameMr: r.name_mr },
+      update: {
+        nameMr: r.name_mr,
+        category,
+      },
       create: {
         nameEn: r.name_en,
         nameMr: r.name_mr,
+        category,
       },
     });
   }
 }
+
 
 async function seedLacunaSubVirtues() {
   const rows = await readCSV("lacuna_subvirtues.csv");

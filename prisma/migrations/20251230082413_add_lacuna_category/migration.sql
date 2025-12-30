@@ -10,12 +10,16 @@ CREATE TYPE "Rating" AS ENUM ('ALWAYS', 'OFTEN', 'RARELY', 'NEVER');
 -- CreateEnum
 CREATE TYPE "IrrationalBelief" AS ENUM ('MUST_BE_LOVED', 'MUST_BE_COMPETENT', 'MUST_HAVE_COMFORT');
 
+-- CreateEnum
+CREATE TYPE "LacunaCategory" AS ENUM ('A', 'B', 'C');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT,
     "phone" TEXT,
+    "passwordHash" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
@@ -26,6 +30,7 @@ CREATE TABLE "Lacuna" (
     "id" TEXT NOT NULL,
     "nameEn" TEXT NOT NULL,
     "nameMr" TEXT NOT NULL,
+    "category" "LacunaCategory" NOT NULL,
 
     CONSTRAINT "Lacuna_pkey" PRIMARY KEY ("id")
 );
@@ -35,6 +40,7 @@ CREATE TABLE "LacunaSubVirtue" (
     "id" TEXT NOT NULL,
     "lacunaId" TEXT NOT NULL,
     "subVirtueId" TEXT NOT NULL,
+    "priority" INTEGER NOT NULL,
 
     CONSTRAINT "LacunaSubVirtue_pkey" PRIMARY KEY ("id")
 );
@@ -183,7 +189,22 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 CREATE UNIQUE INDEX "User_phone_key" ON "User"("phone");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Lacuna_nameEn_key" ON "Lacuna"("nameEn");
+
+-- CreateIndex
+CREATE INDEX "Lacuna_category_idx" ON "Lacuna"("category");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "LacunaSubVirtue_lacunaId_subVirtueId_key" ON "LacunaSubVirtue"("lacunaId", "subVirtueId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Virtue_nameEn_key" ON "Virtue"("nameEn");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SubVirtue_nameEn_key" ON "SubVirtue"("nameEn");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Sentence_textEn_key" ON "Sentence"("textEn");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "LacunaShortlistItem_sessionId_lacunaId_key" ON "LacunaShortlistItem"("sessionId", "lacunaId");

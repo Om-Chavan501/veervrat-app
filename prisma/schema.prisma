@@ -41,6 +41,12 @@ enum IrrationalBelief {
   MUST_HAVE_COMFORT
 }
 
+enum LacunaCategory {
+  A
+  B
+  C
+}
+
 //////////////////////
 // CORE USER
 //////////////////////
@@ -65,13 +71,14 @@ model User {
 model Lacuna {
   id      String @id @default(uuid())
   nameEn  String @unique
-  nameMr  String 
+  nameMr  String
+  category LacunaCategory
 
-  assessments LacunaAssessment[]
+  assessments           LacunaAssessment[]
+  lacunaShortlistItems  LacunaShortlistItem[]
+  lacunaSubVirtues      LacunaSubVirtue[]
 
-  lacunaShortlistItems LacunaShortlistItem[]
-
-  lacunaSubVirtues LacunaSubVirtue[]
+  @@index([category])
 }
 
 model LacunaSubVirtue {
