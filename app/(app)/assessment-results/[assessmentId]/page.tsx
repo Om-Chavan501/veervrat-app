@@ -22,7 +22,19 @@ export default async function AssessmentResultsPage(
   const assessment = await prisma.lacunaAssessment.findUnique({
     where: { id: params.assessmentId },
     include: {
-      lacuna: true,
+      lacuna: {
+        include: {
+          lacunaSubVirtues: {
+            include: {
+              subVirtue: {
+                include: {
+                  sentences: true,
+                },
+              },
+            },
+          },
+        },
+      },
       responses: {
         include: {
           sentence: {
@@ -70,6 +82,13 @@ export default async function AssessmentResultsPage(
     ratingCounts[response.rating as keyof typeof ratingCounts]++;
   });
 
+  const totalSentences = assessment.suggestions.reduce((sum) => sum + 1, assessment.responses.length);
+  const answeredCount = assessment.responses.length;
+  const unansweredCount = assessment.lacuna.lacunaSubVirtues.reduce(
+    (sum, lsv) => sum + lsv.subVirtue.sentences.length,
+    0
+  ) - answeredCount;
+
   return (
     <div>
       <div className="mb-8">
@@ -84,7 +103,7 @@ export default async function AssessmentResultsPage(
       {/* Summary Stats */}
       <section className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Summary</h3>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-5 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">
               {ratingCounts.ALWAYS}
@@ -108,6 +127,12 @@ export default async function AssessmentResultsPage(
               {ratingCounts.NEVER}
             </div>
             <div className="text-sm text-gray-600">Never</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-600">
+              {unansweredCount}
+            </div>
+            <div className="text-sm text-gray-600">Not Attempted</div>
           </div>
         </div>
       </section>
@@ -175,8 +200,13 @@ export default async function AssessmentResultsPage(
         <section className="bg-green-50 rounded-lg border border-green-200 p-6 mb-8">
           <h3 className="text-lg font-bold text-green-900 mb-2">Excellent!</h3>
           <p className="text-green-800">
-            You rated all sentences highly. Continue cultivating these virtues.
+            You rated all attempted sentences highly. Continue cultivating these virtues.
           </p>
+          {unansweredCount > 0 && (
+            <p className="text-sm text-green-700 mt-2">
+              💡 {unansweredCount} sentence{unansweredCount !== 1 ? "s" : ""} were not attempted. You can revisit them anytime.
+            </p>
+          )}
         </section>
       )}
 

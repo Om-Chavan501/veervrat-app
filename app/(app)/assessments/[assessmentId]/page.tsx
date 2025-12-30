@@ -20,6 +20,7 @@ export default function AssessmentPage(props: AssessmentPageProps) {
   const [saving, setSaving] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [currentRatings, setCurrentRatings] = useState<Map<string, Rating>>(new Map());
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   useEffect(() => {
     props.params.then(setParams);
@@ -62,6 +63,10 @@ export default function AssessmentPage(props: AssessmentPageProps) {
   };
 
   const handleCompleteAssessment = async () => {
+    setShowCompletionModal(true);
+  };
+
+  const handleConfirmCompletion = async () => {
     try {
       setCompleting(true);
       await completeAssessmentAction(params!.assessmentId);
@@ -70,6 +75,7 @@ export default function AssessmentPage(props: AssessmentPageProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to complete assessment");
       setCompleting(false);
+      setShowCompletionModal(false);
     }
   };
 
@@ -195,9 +201,9 @@ export default function AssessmentPage(props: AssessmentPageProps) {
         <div className="mt-8 flex justify-end">
           <button
             onClick={handleCompleteAssessment}
-            disabled={completing || answeredCount < totalSentences}
+            disabled={completing || answeredCount === 0}
             className={`px-6 py-3 rounded font-medium transition ${
-              answeredCount < totalSentences
+              answeredCount === 0
                 ? "bg-gray-300 text-gray-600 cursor-not-allowed"
                 : "bg-green-600 text-white hover:bg-green-700"
             }`}
@@ -215,6 +221,46 @@ export default function AssessmentPage(props: AssessmentPageProps) {
           >
             View Results
           </a>
+        </div>
+      )}
+
+      {/* Completion Confirmation Modal */}
+      {showCompletionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full shadow-lg">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
+              Complete Assessment?
+            </h3>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6">
+              <p className="text-sm text-gray-700">
+                <span className="font-bold">{answeredCount}</span> out of{" "}
+                <span className="font-bold">{totalSentences}</span> sentences
+                have been answered.
+              </p>
+              <p className="text-xs text-gray-600 mt-2">
+                ℹ️ You must answer at least one sentence to proceed. Answering all
+                sentences is not mandatory.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={handleConfirmCompletion}
+                disabled={completing}
+                className="w-full bg-green-600 text-white py-2 rounded font-medium hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {completing ? "Completing..." : "Yes, Complete Assessment"}
+              </button>
+              <button
+                onClick={() => setShowCompletionModal(false)}
+                disabled={completing}
+                className="w-full bg-gray-200 text-gray-900 py-2 rounded font-medium hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

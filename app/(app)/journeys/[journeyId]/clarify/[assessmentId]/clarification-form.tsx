@@ -111,11 +111,31 @@ export function ClarificationForm({
         </div>
       )}
 
-      {/* Question 1: Virtue Relation */}
+      {/* Question 1: Personal Context */}
+      <fieldset className="bg-white rounded-lg border border-gray-200 p-6">
+        <legend className="text-base font-bold text-gray-900 mb-2">
+          Your Personal Context
+        </legend>
+        <p className="text-sm text-gray-600 mb-4">
+          Share a specific personal incident related to your selected lacuna: "{lacunaName}". Where
+          does this sentence apply?
+        </p>
+        <textarea
+          value={formData.personalContextNote}
+          onChange={(e) =>
+            setFormData({ ...formData, personalContextNote: e.target.value })
+          }
+          placeholder="e.g., 'Yesterday, my colleague didn't respond to my email and I spiraled into panic that I wasn't good enough. This is my core pattern. If I had practiced this sentence then, I would have...'"
+          rows={4}
+          className="w-full border border-gray-300 rounded px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </fieldset>
+
+      {/* Question 2: Virtue Relation */}
       <fieldset className="bg-white rounded-lg border border-gray-200 p-6">
         <legend className="text-base font-bold text-gray-900 mb-2">
           How does "{sentenceName}" relate to developing your{" "}
-          <span className="text-blue-600">{subVirtueName}</span>?
+          <span className="text-blue-600">"{subVirtueName}"</span>?
         </legend>
         <p className="text-sm text-gray-600 mb-4">
           Explain the connection between practicing this sentence and building the
@@ -132,12 +152,12 @@ export function ClarificationForm({
         />
       </fieldset>
 
-      {/* Question 2: Lacuna Reduction */}
+      {/* Question 3: Lacuna Reduction */}
       <fieldset className="bg-white rounded-lg border border-gray-200 p-6">
         <legend className="text-base font-bold text-gray-900 mb-2">
-          How does strengthening your{" "}
-          <span className="text-blue-600">{subVirtueName}</span> reduce your{" "}
-          <span className="text-red-600">{lacunaName}</span>?
+          How does strengthening your virtue{" "}
+          <span className="text-blue-600">"{subVirtueName}"</span> reduce your lacuna{" "}
+          <span className="text-red-600">"{lacunaName}"</span>?
         </legend>
         <p className="text-sm text-gray-600 mb-4">
           Show the causal link: by consistently practicing this virtue, how does your
@@ -154,7 +174,7 @@ export function ClarificationForm({
         />
       </fieldset>
 
-      {/* Question 3: Unified Insight */}
+      {/* Question 4: Unified Insight */}
       <fieldset className="bg-white rounded-lg border border-gray-200 p-6">
         <legend className="text-base font-bold text-gray-900 mb-2">
           Your Unified Insight
@@ -174,25 +194,6 @@ export function ClarificationForm({
         />
       </fieldset>
 
-      {/* Question 4: Personal Context */}
-      <fieldset className="bg-white rounded-lg border border-gray-200 p-6">
-        <legend className="text-base font-bold text-gray-900 mb-2">
-          Your Personal Context
-        </legend>
-        <p className="text-sm text-gray-600 mb-4">
-          Share a specific personal incident related to your {lacunaName}. Where
-          does this sentence apply?
-        </p>
-        <textarea
-          value={formData.personalContextNote}
-          onChange={(e) =>
-            setFormData({ ...formData, personalContextNote: e.target.value })
-          }
-          placeholder="e.g., 'Yesterday, my colleague didn't respond to my email and I spiraled into panic that I wasn't good enough. This is my core pattern. If I had practiced this sentence then, I would have...'"
-          rows={4}
-          className="w-full border border-gray-300 rounded px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </fieldset>
 
       {/* Core Irrational Belief Selection */}
       <fieldset className="bg-white rounded-lg border border-gray-200 p-6">
@@ -200,7 +201,7 @@ export function ClarificationForm({
           Your Core Irrational Belief
         </legend>
         <p className="text-sm text-gray-600 mb-4">
-          Which underlying irrational belief is most active in your {lacunaName}?
+          Which underlying irrational belief is most active in your lacuna: "{lacunaName}"?
         </p>
         <div className="space-y-3">
           {IRRATIONAL_BELIEFS.map((belief) => (
