@@ -12,10 +12,10 @@
 
 ## Server Actions
 - **app/actions/vratmitra.ts** (NEW)
-  - `inviteVratmiraAction()` - Invite user as Vratmitra
-  - `acceptVratmiraInvitationAction()` - Accept pending invitation
-  - `detachVratmiraAction()` - Detach Vratmitra (either party)
-  - `getActiveVratmiraAction()` - Get active Vratmitra for journey
+  - `inviteVratmitraAction()` - Invite user as Vratmitra
+  - `acceptVratmitraInvitationAction()` - Accept pending invitation
+  - `detachVratmitraAction()` - Detach Vratmitra (either party)
+  - `getActiveVratmitraAction()` - Get active Vratmitra for journey
   - `getPendingInvitationsAction()` - Get user's pending invitations
 
 ## UI Components
@@ -39,12 +39,12 @@
 ### Updated Pages
 - **app/(app)/journeys/[journeyId]/page.tsx**
   - Added Vratmitra section with invite form/status display
-  - Integrated `getActiveVratmiraAction()` query
-  - Imports: `getActiveVratmiraAction`, components
+  - Integrated `getActiveVratmitraAction()` query
+  - Imports: `getActiveVratmitraAction`, components
 
 - **app/(app)/dashboard/page.tsx**
   - Added Vratmitra Invitations section at top
-  - Integrated `PendingVratmiraInvitations` component
+  - Integrated `PendingVratmitraInvitations` component
 
 ## Documentation
 - **VRATMITRA_SYSTEM.md** (NEW)

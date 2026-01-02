@@ -10,7 +10,7 @@ import { VratmitraStatus } from "@/generated/prisma/enums";
  * - Only one active Vratmitra per journey (pending or active)
  * - Creates new invitation record with PENDING status
  */
-export async function inviteVratmiraAction(
+export async function inviteVratmitraAction(
   journeyId: string,
   inviteeEmail: string
 ) {
@@ -106,7 +106,7 @@ export async function inviteVratmiraAction(
  * - Changes status from PENDING to ACTIVE
  * - Sets acceptedAt timestamp
  */
-export async function acceptVratmiraInvitationAction(journeyId: string) {
+export async function acceptVratmitraInvitationAction(journeyId: string) {
   const session = await getSession();
   if (!session) {
     throw new Error("Unauthorized: No session");
@@ -167,7 +167,7 @@ export async function acceptVratmiraInvitationAction(journeyId: string) {
  * - Sets detachedAt timestamp but keeps record
  * - Does NOT delete the attachment record
  */
-export async function detachVratmiraAction(journeyId: string, vratmiraId?: string) {
+export async function detachVratmitraAction(journeyId: string, VratmitraId?: string) {
   const session = await getSession();
   if (!session) {
     throw new Error("Unauthorized: No session");
@@ -186,7 +186,7 @@ export async function detachVratmiraAction(journeyId: string, vratmiraId?: strin
   let attachment = await prisma.journeyVratmitra.findFirst({
     where: {
       journeyId,
-      ...(vratmiraId ? { userId: vratmiraId } : { status: VratmitraStatus.ACTIVE }),
+      ...(VratmitraId ? { userId: VratmitraId } : { status: VratmitraStatus.ACTIVE }),
     },
   });
 
@@ -229,7 +229,7 @@ export async function detachVratmiraAction(journeyId: string, vratmiraId?: strin
  * Get active Vratmitra for a journey
  * - Returns the currently active Vratmitra or null
  */
-export async function getActiveVratmiraAction(journeyId: string) {
+export async function getActiveVratmitraAction(journeyId: string) {
   const session = await getSession();
   if (!session) {
     throw new Error("Unauthorized: No session");

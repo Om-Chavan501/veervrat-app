@@ -6,9 +6,12 @@ import { JourneyContent } from "./journey-content";
 import { ReflectionForm } from "./reflection-form";
 import { ReflectionHistory } from "./reflection-history";
 import { getTodayReflectionAction, getReflectionsAction } from "@/app/actions/reflection";
-import { getActiveVratmiraAction } from "@/app/actions/vratmitra";
+import { getActiveVratmitraAction } from "@/app/actions/vratmitra";
+import { getExposuresAction } from "@/app/actions/exposure";
 import { VratmitraStatusDisplay } from "./vratmitra-status-display";
-import { InviteVratmiraForm } from "./invite-vratmitra-form";
+import { InviteVratmitraForm } from "./invite-vratmitra-form";
+import { ExposureForm } from "./exposure-form";
+import { ExposuresSection } from "./exposures-section";
 
 interface JourneyPageProps {
   params: Promise<{ journeyId: string }>;
@@ -62,7 +65,8 @@ export default async function JourneyPage(props: JourneyPageProps) {
   // Get reflections for this journey
   const reflections = await getReflectionsAction(journey.id);
   const todayReflection = await getTodayReflectionAction(journey.id);
-  const activeVratmitra = await getActiveVratmiraAction(journey.id);
+  const activeVratmitra = await getActiveVratmitraAction(journey.id);
+  const exposures = await getExposuresAction(journey.id);
 
   const statusColor =
     journey.state === "ACTIVE"
@@ -125,8 +129,29 @@ export default async function JourneyPage(props: JourneyPageProps) {
           ) : null}
 
           {!activeVratmitra && (
-            <InviteVratmiraForm journeyId={journey.id} />
+            <InviteVratmitraForm journeyId={journey.id} />
           )}
+        </div>
+      </section>
+
+      {/* Exposures Section */}
+      <section className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-2">
+            Exposures
+          </h3>
+          <p className="text-sm text-gray-600">
+            Log your intentional experiences and practice attempts.
+          </p>
+        </div>
+
+        <div className="space-y-6">
+          <ExposureForm journeyId={journey.id} />
+          <ExposuresSection
+            initialExposures={exposures}
+            journeyId={journey.id}
+            isOwner={true}
+          />
         </div>
       </section>
 

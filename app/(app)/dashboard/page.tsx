@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { PendingVratmiraInvitations } from "./pending-vratmitra-invitations";
+import { PendingVratmitraInvitations } from "./pending-vratmitra-invitations";
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
       {/* Pending Vratmitra Invitations */}
       <section className="mb-8">
         <h3 className="text-xl font-bold text-gray-800 mb-4">Vratmitra Invitations</h3>
-        <PendingVratmiraInvitations />
+        <PendingVratmitraInvitations />
       </section>
 
       {/* Active Journeys */}

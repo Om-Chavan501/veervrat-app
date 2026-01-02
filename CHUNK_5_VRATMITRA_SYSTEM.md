@@ -61,7 +61,7 @@ model JourneyVratmitra {
 
 All server actions are in [`app/actions/vratmitra.ts`](app/actions/vratmitra.ts)
 
-### `inviteVratmiraAction(journeyId, inviteeEmail)`
+### `inviteVratmitraAction(journeyId, inviteeEmail)`
 Invite a user as Vratmitra for a journey.
 
 **Requirements**:
@@ -78,7 +78,7 @@ Invite a user as Vratmitra for a journey.
 
 ---
 
-### `acceptVratmiraInvitationAction(journeyId)`
+### `acceptVratmitraInvitationAction(journeyId)`
 Accept a pending Vratmitra invitation.
 
 **Requirements**:
@@ -92,7 +92,7 @@ Accept a pending Vratmitra invitation.
 
 ---
 
-### `detachVratmiraAction(journeyId, vratmiraId?)`
+### `detachVratmitraAction(journeyId, VratmitraId?)`
 Detach Vratmitra from journey.
 
 **Requirements**:
@@ -106,7 +106,7 @@ Detach Vratmitra from journey.
 
 ---
 
-### `getActiveVratmiraAction(journeyId)`
+### `getActiveVratmitraAction(journeyId)`
 Get the currently active Vratmitra for a journey.
 
 **Requirements**:
@@ -124,7 +124,7 @@ Get all pending Vratmitra invitations for the current user.
 
 ## UI Components
 
-### InviteVratmiraForm
+### InviteVratmitraForm
 **File**: [`app/(app)/journeys/[journeyId]/invite-vratmitra-form.tsx`](app/(app)/journeys/[journeyId]/invite-vratmitra-form.tsx)
 
 A form for journey owners to invite Vratmitras by email.
@@ -162,7 +162,7 @@ Displays active Vratmitra information with detach capability.
 
 ---
 
-### PendingVratmiraInvitations
+### PendingVratmitraInvitations
 **File**: [`app/(app)/dashboard/pending-vratmitra-invitations.tsx`](app/(app)/dashboard/pending-vratmitra-invitations.tsx)
 
 Displays all pending Vratmitra invitations on the dashboard.
@@ -183,7 +183,7 @@ The journey detail page includes:
 1. **Vratmitra section** with:
    - Active Vratmitra display (if attached)
    - Invite form (if no active Vratmitra)
-2. **Loading active Vratmitra**: `await getActiveVratmiraAction(journey.id)`
+2. **Loading active Vratmitra**: `await getActiveVratmitraAction(journey.id)`
 
 ---
 
@@ -192,7 +192,7 @@ The journey detail page includes:
 
 The dashboard displays:
 1. **Vratmitra Invitations section** at the top
-2. Uses `PendingVratmiraInvitations` component
+2. Uses `PendingVratmitraInvitations` component
 3. Shows pending invitations before journeys/assessments
 
 ## Permissions & Access

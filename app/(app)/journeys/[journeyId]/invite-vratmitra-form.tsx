@@ -1,19 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { inviteVratmiraAction } from "@/app/actions/vratmitra";
+import { inviteVratmitraAction } from "@/app/actions/vratmitra";
 
-interface InviteVratmiraFormProps {
+interface InviteVratmitraFormProps {
   journeyId: string;
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
 
-export function InviteVratmiraForm({
+export function InviteVratmitraForm({
   journeyId,
   onSuccess,
   onError,
-}: InviteVratmiraFormProps) {
+}: InviteVratmitraFormProps) {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -24,7 +24,7 @@ export function InviteVratmiraForm({
     setMessage(null);
 
     try {
-      await inviteVratmiraAction(journeyId, email);
+      await inviteVratmitraAction(journeyId, email);
       setMessage({
         type: "success",
         text: `Invitation sent to ${email}`,

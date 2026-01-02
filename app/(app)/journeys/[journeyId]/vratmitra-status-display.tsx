@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { detachVratmiraAction } from "@/app/actions/vratmitra";
+import { detachVratmitraAction } from "@/app/actions/vratmitra";
 import type { JourneyVratmitra, User } from "@/generated/prisma/client";
 
 interface VratmitraStatusDisplayProps {
@@ -28,7 +28,7 @@ export function VratmitraStatusDisplay({
 
     setIsDetaching(true);
     try {
-      await detachVratmiraAction(journeyId);
+      await detachVratmitraAction(journeyId);
       onDetach?.();
     } catch (error) {
       const errorMessage =

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getPendingInvitationsAction, acceptVratmiraInvitationAction, detachVratmiraAction } from "@/app/actions/vratmitra";
+import { getPendingInvitationsAction, acceptVratmitraInvitationAction, detachVratmitraAction } from "@/app/actions/vratmitra";
 import Link from "next/link";
 import type { JourneyVratmitra } from "@/generated/prisma/client";
 
@@ -26,7 +26,7 @@ interface PendingInvitation extends JourneyVratmitra {
   };
 }
 
-export function PendingVratmiraInvitations() {
+export function PendingVratmitraInvitations() {
   const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export function PendingVratmiraInvitations() {
     setMessage(null);
 
     try {
-      await acceptVratmiraInvitationAction(journeyId);
+      await acceptVratmitraInvitationAction(journeyId);
       setMessage({
         type: "success",
         text: "Invitation accepted!",
@@ -83,7 +83,7 @@ export function PendingVratmiraInvitations() {
     setMessage(null);
 
     try {
-      await detachVratmiraAction(journeyId);
+      await detachVratmitraAction(journeyId);
       setMessage({
         type: "success",
         text: "Invitation declined.",
