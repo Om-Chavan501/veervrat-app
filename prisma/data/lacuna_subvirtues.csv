@@ -1,11 +1,11 @@
 lacuna_name_en,subvirtue_name_en,priority
 Just pretense - no real deal / show off,Goal orientation,1
-Just pretense - no real deal / show off,Faith/Conviction,2
+Just pretense - no real deal / show off,Concern,2
 Just pretense - no real deal / show off,Future planning skills,3
 Just pretense - no real deal / show off,Self-reflection,4
 Just pretense - no real deal / show off,Attitude of finding root causes,5
 Bad communication,Communication skills,1
-Bad communication,Faith/Conviction,2
+Bad communication,Concern,2
 Bad communication,Organization orientation,3
 Inability in prioritization,Ability to separate 'self' from decisions,1
 Inability in prioritization,Creativity,2
@@ -49,9 +49,9 @@ Unable to follow somebody,Organization orientation,1
 Unable to follow somebody,Adaptability,2
 Unable to follow somebody,Intellectual Self-reliance,3
 Unable to follow somebody,Emotional Self-reliance,4
-Unable to follow somebody,Faith/Conviction,5
+Unable to follow somebody,Concern,5
 Less sensitivity / empathy,Emotional Self-reliance,1
-Less sensitivity / empathy,Faith/Conviction,2
+Less sensitivity / empathy,Concern,2
 Less sensitivity / empathy,Intolerance of injustice,3
 Less sensitivity / empathy,Team building skills,4
 Little continuity in efforts,Consistency/Persistence,1
@@ -103,13 +103,13 @@ Insecurity,Execution skills,3
 Insecurity,Future planning skills,4
 Insecurity,Emotional Self-reliance,5
 Insecurity,Determination,6
-Insecurity,Faith/Conviction,7
+Insecurity,Concern,7
 Insecurity,Ability to separate 'self' from decisions,8
 Insecurity,Adaptability,9
 Insecurity,Responsibility and Ownership,10
 Insecurity,Communication skills,11
 Not being aware of social debt,Social orientation,1
-Not being aware of social debt,Faith/Conviction,2
+Not being aware of social debt,Concern,2
 Not being aware of social debt,Protecting social welfare,3
 Not being aware of social debt,Responsibility and Ownership,4
 Comforting in continuation of old,Innovation,1
@@ -138,8 +138,8 @@ Tendency to avoid conflict,Competitive spirit/Will to win,2
 Tendency to avoid conflict,Ambition/Grandeur,3
 Tendency to avoid conflict,Protecting social welfare,4
 Tendency to avoid conflict,Determination,5
-Tendency to avoid conflict,Faith/Conviction,6
-Self-centredness,Faith/Conviction,1
+Tendency to avoid conflict,Concern,6
+Self-centredness,Concern,1
 Self-centredness,Social orientation,2
 Self-centredness,Organization orientation,3
 Self-centredness,Intellectual Self-reliance,4
