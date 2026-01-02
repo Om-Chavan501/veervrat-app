@@ -6,6 +6,9 @@ import { JourneyContent } from "./journey-content";
 import { ReflectionForm } from "./reflection-form";
 import { ReflectionHistory } from "./reflection-history";
 import { getTodayReflectionAction, getReflectionsAction } from "@/app/actions/reflection";
+import { getActiveVratmiraAction } from "@/app/actions/vratmitra";
+import { VratmitraStatusDisplay } from "./vratmitra-status-display";
+import { InviteVratmiraForm } from "./invite-vratmitra-form";
 
 interface JourneyPageProps {
   params: Promise<{ journeyId: string }>;
@@ -59,6 +62,7 @@ export default async function JourneyPage(props: JourneyPageProps) {
   // Get reflections for this journey
   const reflections = await getReflectionsAction(journey.id);
   const todayReflection = await getTodayReflectionAction(journey.id);
+  const activeVratmitra = await getActiveVratmiraAction(journey.id);
 
   const statusColor =
     journey.state === "ACTIVE"
@@ -99,6 +103,32 @@ export default async function JourneyPage(props: JourneyPageProps) {
         userId={session.userId}
         reflectionsCount={reflections.length}
       />
+
+      {/* Vratmitra Section */}
+      <section className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-2">
+            Vratmitra (Companion)
+          </h3>
+          <p className="text-sm text-gray-600">
+            Invite a trusted companion to support your journey.
+          </p>
+        </div>
+
+        <div className="space-y-6">
+          {activeVratmitra ? (
+            <VratmitraStatusDisplay
+              vratmitra={activeVratmitra}
+              journeyId={journey.id}
+              isJourneyOwner={true}
+            />
+          ) : null}
+
+          {!activeVratmitra && (
+            <InviteVratmiraForm journeyId={journey.id} />
+          )}
+        </div>
+      </section>
 
       {/* Reflection Section */}
       <section className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
