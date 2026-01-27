@@ -81,6 +81,7 @@ model User {
   assessments       LacunaAssessment[]
   journeys          SentenceJourney[]
   vratmitraLinks    JourneyVratmitra[]
+  reflectionComments ReflectionComment[]
 
   adminRole         AdminRole?
 }
@@ -412,6 +413,20 @@ model DailyReflection {
   createdAt   DateTime @default(now())
 
   journey SentenceJourney @relation(fields: [journeyId], references: [id])
+  comments ReflectionComment[]
 
   @@unique([journeyId, date])
+}
+
+model ReflectionComment {
+  id           String   @id @default(uuid())
+  reflectionId String
+  userId       String
+  text         String
+  createdAt    DateTime @default(now())
+
+  reflection DailyReflection @relation(fields: [reflectionId], references: [id])
+  user       User            @relation(fields: [userId], references: [id])
+
+  @@index([reflectionId])
 }

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -9,64 +8,96 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/ui/empty-state";
-import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
 import { SectionObserver } from "@/components/dashboard/section-observer";
+import { formatDistanceToNow } from "@/lib/time";
+
+type JourneyStaleness = "green" | "yellow" | "red" | "gray";
 
 export default async function DashboardPage() {
   const session = await getSession();
-  if (!session) {
-    redirect("/login");
-  }
+  if (!session) redirect("/login");
 
+  const today = new Date();
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setHours(0, 0, 0, 0);
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
 
-  const [assessments, journeys, totalAssessmentCount, totalJourneyCount, reflectionsThisWeek] =
-    await Promise.all([
-      prisma.lacunaAssessment.findMany({
-        where: { userId: session.userId },
-        include: {
-          lacuna: true,
-        },
-        orderBy: { startedAt: "desc" },
-        take: 6,
-      }),
-      prisma.sentenceJourney.findMany({
-        where: { userId: session.userId },
-        include: {
-          sentence: {
-            include: {
-              subVirtue: true,
+  const [
+    inProgressAssessments,
+    activeJourneys,
+    pendingInvites,
+    reflectionsThisWeek,
+    reflectionMeta,
+    recentReflections,
+    recentJourneys,
+    recentCompletedAssessments,
+    recentVratmitraAccepted,
+  ] = await Promise.all([
+    prisma.lacunaAssessment.findMany({
+      where: { userId: session.userId, status: "IN_PROGRESS" },
+      include: {
+        lacuna: {
+          include: {
+            lacunaSubVirtues: {
+              include: { subVirtue: { include: { sentences: true } } },
             },
           },
         },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-      }),
-      prisma.lacunaAssessment.count({ where: { userId: session.userId } }),
-      prisma.sentenceJourney.count({ where: { userId: session.userId } }),
-      prisma.dailyReflection.count({
-        where: {
-          journey: { userId: session.userId },
-          date: { gte: sevenDaysAgo },
-        },
-      }),
-    ]);
-
-  const activeAssessments = assessments.filter((a) => a.status === "IN_PROGRESS");
-  const completedAssessments = assessments.filter((a) => a.status === "COMPLETED");
-
-  const journeyIds = journeys.map((j) => j.id);
-  const reflectionMeta =
-    journeyIds.length > 0
-      ? await prisma.dailyReflection.groupBy({
-          by: ["journeyId"],
-          where: { journeyId: { in: journeyIds } },
-          _count: { _all: true },
-          _max: { date: true },
-        })
-      : [];
+        _count: { select: { responses: true } },
+      },
+      orderBy: { startedAt: "desc" },
+      take: 6,
+    }),
+    prisma.sentenceJourney.findMany({
+      where: { userId: session.userId, state: "ACTIVE" },
+      include: {
+        sentence: { include: { subVirtue: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    }),
+    prisma.journeyVratmitra.count({
+      where: { userId: session.userId, status: "PENDING" },
+    }),
+    prisma.dailyReflection.count({
+      where: {
+        journey: { userId: session.userId },
+        date: { gte: sevenDaysAgo },
+      },
+    }),
+    prisma.dailyReflection.groupBy({
+      by: ["journeyId"],
+      where: { journey: { userId: session.userId } },
+      _count: { _all: true },
+      _max: { date: true },
+    }),
+    prisma.dailyReflection.findMany({
+      where: { journey: { userId: session.userId } },
+      include: { journey: { include: { sentence: true } } },
+      orderBy: { date: "desc" },
+      take: 3,
+    }),
+    prisma.sentenceJourney.findMany({
+      where: { userId: session.userId },
+      include: { sentence: true },
+      orderBy: { createdAt: "desc" },
+      take: 2,
+    }),
+    prisma.lacunaAssessment.findMany({
+      where: { userId: session.userId, status: "COMPLETED" },
+      include: { lacuna: true },
+      orderBy: { completedAt: "desc" },
+      take: 2,
+    }),
+    prisma.journeyVratmitra.findMany({
+      where: { userId: session.userId, status: "ACTIVE" },
+      include: {
+        journey: { include: { sentence: true, user: true } },
+      },
+      orderBy: { acceptedAt: "desc" },
+      take: 2,
+    }),
+  ]);
 
   const reflectionCountByJourney = new Map<string, number>();
   const lastReflectionByJourney = new Map<string, Date | null>();
@@ -76,74 +107,85 @@ export default async function DashboardPage() {
     lastReflectionByJourney.set(meta.journeyId, meta._max.date);
   });
 
-  const activeJourneys = journeys.filter((j) => j.state === "ACTIVE");
-  const inactiveJourneys = journeys.filter((j) => j.state === "INACTIVE");
-  const completedJourneys = journeys.filter((j) => j.state === "COMPLETED");
+  const staleJourneys = activeJourneys.filter((journey) => {
+    const last = lastReflectionByJourney.get(journey.id);
+    if (!last) return true;
+    const days = daysBetween(last, today);
+    return days > 7;
+  });
 
-  const showWelcome = totalJourneyCount === 0 && totalAssessmentCount === 0;
-  const showHeaderProgress = activeJourneys.length > 0;
+  const showNeedsAttention =
+    pendingInvites > 0 || inProgressAssessments.length > 0 || staleJourneys.length > 0;
+
+  const hero = buildHero({
+    pendingInvites,
+    inProgressAssessments,
+    activeJourneys,
+    reflectionsThisWeek,
+  });
+
+  const activity = buildRecentActivity({
+    reflections: recentReflections,
+    journeys: recentJourneys,
+    assessments: recentCompletedAssessments,
+    invites: recentVratmitraAccepted,
+  }).slice(0, 5);
 
   return (
-    <div className="space-y-10">
-      <SectionObserver sectionIds={["hero", "journeys", "invitations", "assessments", "archive", "profile"]} />
-
-      {showWelcome && <WelcomeBanner userName={session.name} shouldShow={showWelcome} />}
+    <div className="space-y-8">
+      <SectionObserver sectionIds={["hero", "attention", "journeys", "invitations", "assessments", "activity"]} />
 
       <section className="card shadow-soft" data-section="hero" id="hero">
-        <div className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between md:p-8">
-          <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#6b6b6b]">
-              Welcome back
-            </p>
-            <h2 className="text-3xl font-bold text-[#2c2c2c]">
-              {session.name}, keep moving with intention
-            </h2>
-            <p className="text-base text-[#6b6b6b] max-w-2xl">
-              Your journeys, assessments, and reflections are all in one place. Stay steady, one practice at a time.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <StatPill
-              label="Active journeys"
-              value={activeJourneys.length}
-              tone="active"
-              helper={`${completedJourneys.length} completed`}
-            />
-            <StatPill
-              label="Assessments in progress"
-              value={activeAssessments.length}
-              tone="info"
-              helper={`${completedAssessments.length} done`}
-            />
-            <StatPill
-              label="Invitations"
-              value={<PendingInviteCount userId={session.userId} />}
-              tone="neutral"
-              helper="Review companions"
-            />
+        <div className="flex flex-col items-start gap-4 p-6 text-left md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#6b6b6b]">{hero.label}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-5xl font-bold text-[#2c2c2c]">{hero.metric}</p>
+              <p className="text-lg text-[#6b6b6b]">{hero.metricLabel}</p>
+            </div>
+            <p className="mt-2 text-sm text-[#4a4a4a]">{hero.message}</p>
+            <div className="mt-4">
+              <Button asChild variant="primary" size="lg">
+                <Link href={hero.actionHref}>{hero.actionLabel}</Link>
+              </Button>
+            </div>
           </div>
         </div>
-        {showHeaderProgress && (
-          <div className="flex items-center justify-end gap-2 border-t border-[#e5e5e5] bg-white/70 px-6 py-3 text-sm text-[#4a4a4a]">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#e5e5e5] bg-[#f7f4ed] px-3 py-1">
-              <span className="status-dot bg-[#6b8e4e]" aria-hidden />
-              {activeJourneys.length} journeys active
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#e5e5e5] bg-[#f7f4ed] px-3 py-1">
-              <span className="status-dot bg-[#c47b5c]" aria-hidden />
-              {reflectionsThisWeek} reflections this week
-            </span>
-          </div>
-        )}
       </section>
+
+      {showNeedsAttention && (
+        <section data-section="attention">
+          <Card className="border border-[#f2d195] bg-[#fff6e0] shadow-soft">
+            <CardHeader>
+              <CardTitle>🔔 Needs Your Attention</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-[#4a4a4a]">
+              {pendingInvites > 0 && (
+                <AttentionItem href="#invitations" text={`${pendingInvites} pending Vratmitra invitation${pendingInvites > 1 ? "s" : ""}`} />
+              )}
+              {inProgressAssessments.length > 0 && (
+                <AttentionItem
+                  href="#assessments"
+                  text={`${inProgressAssessments.length} assessment${inProgressAssessments.length > 1 ? "s" : ""} in progress`}
+                />
+              )}
+              {staleJourneys.length > 0 && (
+                <AttentionItem
+                  href="#journeys"
+                  text={`${staleJourneys.length} journey${staleJourneys.length > 1 ? "s" : ""} need reflection`}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-section="journeys" id="journeys">
         <Card className="shadow-soft">
           <CardHeader className="flex items-start justify-between gap-3">
             <div>
               <CardTitle>Active Journeys</CardTitle>
-              <CardDescription>Recent practice threads you&apos;re nurturing.</CardDescription>
+              <CardDescription>Focus on the journeys that move you forward.</CardDescription>
             </div>
             <Badge tone="active" className="px-2 py-1 text-xs font-bold">
               {activeJourneys.length} active
@@ -162,15 +204,26 @@ export default async function DashboardPage() {
                 }
               />
             ) : (
-              activeJourneys.slice(0, 3).map((journey) => {
+              activeJourneys.map((journey) => {
                 const reflectionCount = reflectionCountByJourney.get(journey.id) ?? 0;
                 const lastReflection = lastReflectionByJourney.get(journey.id);
+                const staleness = getStaleness(lastReflection, today);
+                const borderClass =
+                  staleness === "green"
+                    ? "border-l-4 border-l-[#6b8e4e]"
+                    : staleness === "yellow"
+                    ? "border-l-4 border-l-[#ffa726]"
+                    : staleness === "red"
+                    ? "border-l-4 border-l-[#e57373]"
+                    : "border-l-4 border-l-[#9e9e9e]";
+
+                const progressPercent = Math.min(reflectionCount * 5, 100);
 
                 return (
                   <Link
                     key={journey.id}
                     href={`/journeys/${journey.id}`}
-                    className="group block rounded-[16px] border border-[#e5e5e5] bg-gradient-to-br from-white to-[#f8f5ee] px-5 py-4 shadow-card transition hover:-translate-y-0.5 hover:border-[#6b8e4e] hover:shadow-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b8e4e]"
+                    className={`group block rounded-[16px] border border-[#e5e5e5] bg-white px-5 py-4 shadow-card transition hover:-translate-y-0.5 hover:border-[#6b8e4e] hover:shadow-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b8e4e] ${borderClass}`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-2">
@@ -178,55 +231,30 @@ export default async function DashboardPage() {
                           {journey.sentence.subVirtue.nameEn}
                         </Badge>
                         <p className="text-base font-semibold text-[#2c2c2c]">
-                          {journey.sentence.textEn.slice(0, 80)}
-                          {journey.sentence.textEn.length > 80 ? "..." : ""}
-                        </p>
-                        <p className="text-sm text-[#6b6b6b]">
-                          {journey.sentence.textMr}
+                          {journey.sentence.textEn.slice(0, 60)}
+                          {journey.sentence.textEn.length > 60 ? "..." : ""}
                         </p>
                         <div className="flex items-center gap-3">
-                          <Progress value={Math.min(reflectionCount, 15)} max={15} />
-                          <span className="text-xs text-[#6b6b6b]">
-                            {reflectionCount} reflections
-                          </span>
+                          <Progress value={progressPercent} />
+                          <span className="text-xs text-[#6b6b6b]">{reflectionCount} reflections</span>
                         </div>
-                        <p className="text-xs text-[#6b6b6b]">
-                          Last reflection:{" "}
-                          {lastReflection
-                            ? new Date(lastReflection).toLocaleDateString()
-                            : "Not yet logged"}
-                        </p>
                       </div>
-                      <Badge tone="active" pulseOnHover>
-                        Continue
-                      </Badge>
                     </div>
                   </Link>
                 );
               })
             )}
-
-            {activeJourneys.length > 3 && (
-              <div className="flex justify-end">
-                <Link
-                  href="/dashboard#journeys"
-                  className="text-sm font-semibold text-[#56723f] hover:text-[#6b8e4e]"
-                >
-                  View all journeys →
-                </Link>
-              </div>
-            )}
           </CardContent>
         </Card>
 
-        <Card className="shadow-soft" data-section="invitations">
+        <Card className="shadow-soft" data-section="invitations" id="invitations">
           <CardHeader className="flex items-start justify-between gap-3">
             <div>
               <CardTitle>Companion Invitations</CardTitle>
               <CardDescription>Review requests to be a Vratmitra.</CardDescription>
             </div>
             <Badge tone="info" className="px-2 py-1 text-xs font-bold">
-              Mindful support
+              {pendingInvites} pending
             </Badge>
           </CardHeader>
           <CardContent>
@@ -235,235 +263,243 @@ export default async function DashboardPage() {
         </Card>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3" data-section="assessments">
-        <Card className="lg:col-span-2 shadow-soft">
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-section="assessments" id="assessments">
+        <Card className="shadow-soft lg:col-span-2">
           <CardHeader className="flex items-start justify-between gap-3">
             <div>
-              <CardTitle>Assessments</CardTitle>
-              <CardDescription>Your recent explorations and results.</CardDescription>
+              <CardTitle>Assessments In Progress</CardTitle>
+              <CardDescription>Resume where you left off.</CardDescription>
             </div>
-            <Badge tone="info" className="px-2 py-1 text-xs font-bold">
-              {assessments.length} recent
-            </Badge>
           </CardHeader>
           <CardContent className="space-y-4">
-            {assessments.length === 0 ? (
+            {inProgressAssessments.length === 0 ? (
               <EmptyState
                 icon={<ChecklistIcon />}
-                title="No assessments yet"
-                description="Assessments help you identify your growth edges. They take 10–15 minutes."
+                title="No assessments in progress"
+                description="Start a new assessment to discover focus areas."
                 action={
                   <Button asChild variant="primary" size="sm">
-                    <Link href="/lacunae">Start Your First Assessment</Link>
+                    <Link href="/lacunae">Start New Assessment</Link>
                   </Button>
                 }
               />
             ) : (
-              assessments.slice(0, 5).map((assessment) => (
-                <div
-                  key={assessment.id}
-                  className="rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-3 shadow-inner"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-[#2c2c2c]">
-                        {assessment.lacuna.nameEn}
-                      </p>
-                      <p className="text-xs text-[#6b6b6b]">{assessment.lacuna.nameMr}</p>
-                      <p className="text-xs text-[#6b6b6b]">
-                        Started {assessment.startedAt.toLocaleDateString()}
-                      </p>
+              inProgressAssessments.map((assessment) => {
+                const totalSentences = assessment.lacuna.lacunaSubVirtues.reduce(
+                  (sum, lsv) => sum + lsv.subVirtue.sentences.length,
+                  0
+                );
+                const answered = assessment._count.responses;
+                return (
+                  <div
+                    key={assessment.id}
+                    className="rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-3 shadow-inner"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-[#2c2c2c]">
+                          {assessment.lacuna.nameEn}
+                        </p>
+                        <p className="text-xs text-[#6b6b6b]">
+                          Started {formatDistanceToNow(assessment.startedAt)}
+                        </p>
+                      </div>
+                      <Badge tone="active">In Progress</Badge>
                     </div>
-                    <Badge
-                      tone={
-                        assessment.status === "COMPLETED"
-                          ? "completed"
-                          : assessment.status === "IN_PROGRESS"
-                          ? "active"
-                          : "neutral"
-                      }
-                    >
-                      {assessment.status === "COMPLETED" ? "Completed" : "In Progress"}
-                    </Badge>
+                    <div className="mt-3 flex items-center justify-between text-sm text-[#4a4a4a]">
+                      <span>
+                        {answered}/{totalSentences} answered
+                      </span>
+                      <Button asChild variant="secondary" size="sm">
+                        <Link href={`/assessments/${assessment.id}`}>Resume Assessment</Link>
+                      </Button>
+                    </div>
                   </div>
-                  <div className="mt-3 flex items-center justify-end gap-2">
-                    <Link
-                      href={
-                        assessment.status === "COMPLETED"
-                          ? `/assessment-results/${assessment.id}`
-                          : `/assessments/${assessment.id}`
-                      }
-                      className="text-sm font-semibold text-[#56723f] hover:text-[#6b8e4e]"
-                    >
-                      {assessment.status === "COMPLETED" ? "View results" : "Continue"}
-                    </Link>
-                  </div>
-                </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section data-section="activity" id="activity">
+        <Card className="shadow-soft">
+          <CardHeader className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription>Latest steps in your practice.</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {activity.length === 0 ? (
+              <EmptyState
+                icon={<SparkIcon />}
+                title="No recent activity"
+                description="Your recent actions will appear here."
+              />
+            ) : (
+              activity.map((item) => (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className="flex items-center justify-between rounded-[12px] border border-[#e5e5e5] bg-white px-4 py-3 text-sm text-[#2c2c2c] hover:border-[#6b8e4e]"
+                >
+                  <span className="flex items-center gap-2">
+                    <span aria-hidden>{item.icon}</span>
+                    {item.label}
+                  </span>
+                  <span className="text-xs text-[#6b6b6b]">{formatDistanceToNow(item.date)}</span>
+                </Link>
               ))
             )}
           </CardContent>
         </Card>
-
-        <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle>What You Can Do Now</CardTitle>
-            <CardDescription>Step back in whenever you are ready.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <ActionButton
-              href="/lacunae"
-              label={showWelcome ? "1. Start Assessment" : "Start Assessment"}
-              icon={<PlayIcon />}
-              tone="primary"
-            />
-            <ActionButton
-              href="/dashboard#assessments"
-              label={showWelcome ? "2. Review Results" : "Review Results"}
-              icon={<ListIcon />}
-              tone="secondary"
-            />
-            <ActionButton
-              href="/dashboard#journeys"
-              label={showWelcome ? "3. Begin Journey" : "Begin Journey"}
-              icon={<CompassIcon />}
-              tone="subtle"
-            />
-            <ActionButton
-              href="/dashboard#journeys"
-              label={showWelcome ? "4. Daily Practice" : "Daily Practice"}
-              icon={<CalendarIcon />}
-              tone="subtle"
-            />
-          </CardContent>
-        </Card>
-      </section>
-
-      <section data-section="archive">
-        <details className="rounded-[16px] border border-[#e5e5e5] bg-white shadow-card">
-          <summary className="flex cursor-pointer items-center justify-between px-5 py-4 text-sm font-semibold text-[#2c2c2c]">
-            {completedJourneys.length} completed journeys
-            <ChevronIcon />
-          </summary>
-          <div className="space-y-3 px-5 pb-5">
-            {completedJourneys.map((journey) => (
-              <Link
-                key={journey.id}
-                href={`/journeys/${journey.id}`}
-                className="block rounded-[12px] border border-[#e5e5e5] bg-[#f7f4ed] px-4 py-3 text-sm font-semibold text-[#2c2c2c] shadow-inner hover:border-[#6b8e4e]"
-              >
-                {journey.sentence.textEn}
-              </Link>
-            ))}
-          </div>
-        </details>
-
-        <details className="mt-4 rounded-[16px] border border-[#e5e5e5] bg-white shadow-card">
-          <summary className="flex cursor-pointer items-center justify-between px-5 py-4 text-sm font-semibold text-[#2c2c2c]">
-            {completedAssessments.length} completed assessments
-            <ChevronIcon />
-          </summary>
-          <div className="space-y-3 px-5 pb-5">
-            {completedAssessments.map((assessment) => (
-              <Link
-                key={assessment.id}
-                href={`/assessment-results/${assessment.id}`}
-                className="block rounded-[12px] border border-[#e5e5e5] bg-[#f7f4ed] px-4 py-3 text-sm font-semibold text-[#2c2c2c] shadow-inner hover:border-[#6b8e4e]"
-              >
-                {assessment.lacuna.nameEn}
-              </Link>
-            ))}
-          </div>
-        </details>
-      </section>
-
-      <section id="profile" data-section="profile">
-        <Card className="shadow-soft">
-          <CardHeader className="flex items-start justify-between gap-3">
-            <div>
-              <CardTitle>Profile &amp; Settings</CardTitle>
-              <CardDescription>Keep your companion details up to date.</CardDescription>
-            </div>
-            <Badge tone="neutral">Slow mode</Badge>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[12px] border border-[#e5e5e5] bg-[#f7f4ed] px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.12em] text-[#6b6b6b]">Name</p>
-              <p className="text-sm font-semibold text-[#2c2c2c]">{session.name}</p>
-            </div>
-            <div className="rounded-[12px] border border-[#e5e5e5] bg-[#f7f4ed] px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.12em] text-[#6b6b6b]">Email</p>
-              <p className="text-sm font-semibold text-[#2c2c2c]">{session.email}</p>
-            </div>
-          </CardContent>
-        </Card>
       </section>
     </div>
   );
 }
 
-function StatPill({
-  label,
-  value,
-  helper,
-  tone = "neutral",
-}: {
-  label: string;
-  value: number | React.ReactNode;
-  helper?: string;
-  tone?: "active" | "info" | "neutral";
-}) {
-  const toneClasses =
-    tone === "active"
-      ? "bg-[#e7f0df] text-[#2d5a1a] border-[#c9d8bd]"
-      : tone === "info"
-      ? "bg-[#e8f2fd] text-[#1c64b0] border-[#c9d9f0]"
-      : "bg-[#f4f1ea] text-[#2c2c2c] border-[#e5e5e5]";
-
+function AttentionItem({ href, text }: { href: string; text: string }) {
   return (
-    <div
-      className={`flex flex-col gap-1 rounded-[14px] border px-4 py-3 shadow-inner ${toneClasses}`}
-    >
-      <p className="text-xs font-semibold uppercase tracking-[0.12em]">{label}</p>
-      <p className="text-2xl font-bold">{value}</p>
-      {helper ? <p className="text-xs text-[#6b6b6b]">{helper}</p> : null}
+    <div className="flex items-center gap-2">
+      <span aria-hidden>⚠️</span>
+      <Link href={href} className="font-semibold text-[#a35300] hover:text-[#6b8e4e]">
+        {text}
+      </Link>
     </div>
   );
 }
 
-function ActionButton({
-  href,
-  label,
-  icon,
-  tone,
+function buildHero({
+  pendingInvites,
+  inProgressAssessments,
+  activeJourneys,
+  reflectionsThisWeek,
 }: {
-  href: string;
-  label: string;
-  icon: ReactNode;
-  tone: "primary" | "secondary" | "subtle";
+  pendingInvites: number;
+  inProgressAssessments: Array<{ id: string }>;
+  activeJourneys: Array<{ id: string }>;
+  reflectionsThisWeek: number;
 }) {
-  const variants: Record<"primary" | "secondary" | "subtle", string> = {
-    primary: "bg-[#6b8e4e] text-white hover:bg-[#56723f]",
-    secondary: "bg-[#c47b5c] text-white hover:bg-[#ab6447]",
-    subtle: "bg-[#f7f4ed] text-[#2c2c2c] hover:border-[#6b8e4e] border",
+  if (pendingInvites > 0) {
+    return {
+      metric: pendingInvites,
+      metricLabel: "pending",
+      label: "Pending Vratmitra Invitations",
+      message: "Review and accept companion requests.",
+      actionLabel: "View Invitations",
+      actionHref: "#invitations",
+    };
+  }
+
+  if (inProgressAssessments.length > 0) {
+    return {
+      metric: inProgressAssessments.length,
+      metricLabel: "in progress",
+      label: "Assessments",
+      message: "Complete your started assessments.",
+      actionLabel: "Resume Assessment",
+      actionHref: `/assessments/${inProgressAssessments[0].id}`,
+    };
+  }
+
+  if (activeJourneys.length > 0) {
+    return {
+      metric: reflectionsThisWeek,
+      metricLabel: "this week",
+      label: "Reflections",
+      message: reflectionsThisWeek > 0 ? "Keep up the practice!" : "No reflections yet this week.",
+      actionLabel: "Log Reflection",
+      actionHref: `/journeys/${activeJourneys[0].id}`,
+    };
+  }
+
+  return {
+    metric: 0,
+    metricLabel: "journeys",
+    label: "Begin",
+    message: "Start with an assessment to begin your practice.",
+    actionLabel: "Start Assessment",
+    actionHref: "/lacunae",
   };
-  return (
-    <Link
-      href={href}
-      className={`flex w-full items-center gap-3 rounded-[12px] px-4 py-3 text-sm font-semibold transition ${variants[tone]}`}
-    >
-      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/30 text-[#2c2c2c]" aria-hidden>
-        {icon}
-      </span>
-      {label}
-    </Link>
-  );
 }
 
-async function PendingInviteCount({ userId }: { userId: string }) {
-  const invites = await prisma.journeyVratmitra.count({
-    where: { status: "PENDING", userId },
+function getStaleness(lastReflection: Date | null | undefined, today: Date): JourneyStaleness {
+  if (!lastReflection) return "gray";
+  const days = daysBetween(lastReflection, today);
+  if (days === 0) return "green";
+  if (days >= 1 && days <= 7) return "yellow";
+  return "red";
+}
+
+function daysBetween(a: Date, b: Date) {
+  const diff = b.getTime() - a.getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+type ActivityItem = { id: string; label: string; href: string; date: Date; icon: string };
+
+function buildRecentActivity({
+  reflections,
+  journeys,
+  assessments,
+  invites,
+}: {
+  reflections: Array<{ id: string; date: Date; journeyId: string; journey: { sentence: { textEn: string } } }>;
+  journeys: Array<{ id: string; createdAt: Date; sentence: { textEn: string } }>;
+  assessments: Array<{ id: string; completedAt: Date | null; lacuna: { nameEn: string } }>;
+  invites: Array<{ id: string; acceptedAt: Date | null; journey: { id: string; sentence: { textEn: string }; user: { name: string } } }>;
+}): ActivityItem[] {
+  const items: ActivityItem[] = [];
+
+  reflections.forEach((r) => {
+    items.push({
+      id: `reflection-${r.id}`,
+      label: `📝 Logged reflection on "${truncate(r.journey.sentence.textEn, 36)}"`,
+      href: `/journeys/${r.journeyId ?? ""}`,
+      date: r.date,
+      icon: "📝",
+    });
   });
-  return invites;
+
+  journeys.forEach((j) => {
+    items.push({
+      id: `journey-${j.id}`,
+      label: `➡️ Started journey: ${truncate(j.sentence.textEn, 42)}`,
+      href: `/journeys/${j.id}`,
+      date: j.createdAt,
+      icon: "➡️",
+    });
+  });
+
+  assessments.forEach((a) => {
+    if (!a.completedAt) return;
+    items.push({
+      id: `assessment-${a.id}`,
+      label: `✓ Completed ${a.lacuna.nameEn} assessment`,
+      href: `/assessment-results/${a.id}`,
+      date: a.completedAt,
+      icon: "✓",
+    });
+  });
+
+  invites.forEach((inv) => {
+    if (!inv.acceptedAt) return;
+    items.push({
+      id: `invite-${inv.id}`,
+      label: `🤝 Accepted Vratmitra for ${inv.journey.user.name}`,
+      href: `/journeys/${inv.journey.id}`,
+      date: inv.acceptedAt,
+      icon: "🤝",
+    });
+  });
+
+  return items.sort((a, b) => b.date.getTime() - a.date.getTime());
+}
+
+function truncate(text: string, length: number) {
+  if (text.length <= length) return text;
+  return text.slice(0, length) + "...";
 }
 
 function CompassIcon() {
@@ -484,39 +520,10 @@ function ChecklistIcon() {
   );
 }
 
-function PlayIcon() {
+function SparkIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M10 8.5 16 12l-6 3.5z" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ListIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M8 7h12M8 12h12M8 17h12" strokeLinecap="round" />
-      <circle cx="4" cy="7" r="1" />
-      <circle cx="4" cy="12" r="1" />
-      <circle cx="4" cy="17" r="1" />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <rect x="4" y="5" width="16" height="15" rx="2" />
-      <path d="M8 3v4M16 3v4M4 10h16" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ChevronIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 text-[#6b6b6b]" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="m12 2 2 5 5 2-5 2-2 5-2-5-5-2 5-2z" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

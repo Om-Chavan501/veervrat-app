@@ -18,12 +18,15 @@ export default async function AppLayout({
     redirect("/login");
   }
 
-  const [activeJourneyCount, inProgressAssessments] = await Promise.all([
+  const [activeJourneyCount, inProgressAssessments, supportedCount] = await Promise.all([
     prisma.sentenceJourney.count({
       where: { userId: session.userId, state: "ACTIVE" },
     }),
     prisma.lacunaAssessment.count({
       where: { userId: session.userId, status: "IN_PROGRESS" },
+    }),
+    prisma.journeyVratmitra.count({
+      where: { userId: session.userId, status: "ACTIVE" },
     }),
   ]);
 
@@ -37,6 +40,7 @@ export default async function AppLayout({
         <NavigationSidebar
           userName={session.name}
           activeJourneyCount={activeJourneyCount}
+          supportedCount={supportedCount}
         />
 
         <div className="flex flex-1 flex-col">

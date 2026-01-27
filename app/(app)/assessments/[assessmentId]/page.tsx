@@ -28,8 +28,6 @@ export default function AssessmentPage(props: AssessmentPageProps) {
   const [saving, setSaving] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [currentRatings, setCurrentRatings] = useState<Map<string, Rating>>(new Map());
-  const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const [completionData, setCompletionData] = useState<{ answered: number; total: number } | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState<string | null>(null);
   const [skipPulse, setSkipPulse] = useState(false);
@@ -124,16 +122,7 @@ export default function AssessmentPage(props: AssessmentPageProps) {
     try {
       setCompleting(true);
       await completeAssessmentAction(params!.assessmentId);
-      setCompletionData({
-        answered: currentRatings.size,
-        total: assessment?.lacuna.lacunaSubVirtues.reduce(
-          (sum, lsv) => sum + lsv.subVirtue.sentences.length,
-          0
-        ) ?? 0,
-      });
-      setAssessment((prev) => (prev ? { ...prev, status: "COMPLETED" } : prev));
-      setShowCompletionModal(true);
-      setCompleting(false);
+      router.push(`/assessment-results/${params!.assessmentId}?completed=true`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to complete assessment");
       setCompleting(false);
@@ -433,58 +422,6 @@ export default function AssessmentPage(props: AssessmentPageProps) {
           </div>
         </div>
       </div>
-
-      {showCompletionModal && completionData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-[20px] border border-[#e5e5e5] bg-white p-6 shadow-soft fade-in">
-            <div className="flex flex-col items-center text-center space-y-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#e7f0df] text-[#2d5a1a] shadow-inner">
-                <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M8 12.5 11 15l5-6" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-[#2c2c2c]">Assessment Complete!</h3>
-                <p className="text-sm text-[#6b6b6b]">
-                  You answered {completionData.answered} of {completionData.total} sentences.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <Progress value={(completionData.answered / completionData.total) * 100} />
-              <div className="rounded-[14px] border border-[#e5e5e5] bg-[#f7f4ed] p-4 shadow-inner space-y-2">
-                <p className="text-sm font-semibold text-[#2c2c2c]">What happens next?</p>
-                <ol className="list-decimal list-inside space-y-1 text-sm text-[#4a4a4a]">
-                  <li>Review your suggestions</li>
-                  <li>Choose a sentence to practice</li>
-                  <li>Begin your journey</li>
-                </ol>
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-col gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => router.push("/dashboard")}
-                disabled={completing}
-              >
-                Save &amp; Exit
-              </Button>
-              <Button
-                variant="primary"
-                loading={completing}
-                onClick={() =>
-                  router.push(`/assessment-results/${params?.assessmentId}?completed=true`)
-                }
-              >
-                View My Results
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {toast && (
         <div

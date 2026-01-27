@@ -187,13 +187,19 @@ export async function getTodayReflectionAction(journeyId: string) {
   // Verify journey exists and user owns it
   const journey = await prisma.sentenceJourney.findUnique({
     where: { id: journeyId },
+    include: { vratmitras: true },
   });
 
   if (!journey) {
     throw new Error("Journey not found");
   }
 
-  if (journey.userId !== session.userId) {
+  const isOwner = journey.userId === session.userId;
+  const isVratmitra = journey.vratmitras.some(
+    (v) => v.userId === session.userId && v.status === "ACTIVE"
+  );
+
+  if (!isOwner && !isVratmitra) {
     throw new Error("Unauthorized");
   }
 
@@ -222,13 +228,19 @@ export async function getReflectionsAction(journeyId: string) {
   // Verify journey exists and user owns it
   const journey = await prisma.sentenceJourney.findUnique({
     where: { id: journeyId },
+    include: { vratmitras: true },
   });
 
   if (!journey) {
     throw new Error("Journey not found");
   }
 
-  if (journey.userId !== session.userId) {
+  const isOwner = journey.userId === session.userId;
+  const isVratmitra = journey.vratmitras.some(
+    (v) => v.userId === session.userId && v.status === "ACTIVE"
+  );
+
+  if (!isOwner && !isVratmitra) {
     throw new Error("Unauthorized");
   }
 
@@ -236,6 +248,14 @@ export async function getReflectionsAction(journeyId: string) {
   const reflections = await prisma.dailyReflection.findMany({
     where: { journeyId },
     orderBy: { date: "desc" },
+    include: {
+      comments: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          user: true,
+        },
+      },
+    },
   });
 
   return reflections;

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 interface SidebarProps {
   userName: string;
   activeJourneyCount: number;
+  supportedCount?: number;
 }
 
 const navItems = [
@@ -52,6 +53,28 @@ const navItems = [
       pathname.startsWith("/journeys") || pathname === "/dashboard",
   },
   {
+    label: "Vratmitra Support",
+    href: "/vratmitra",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M9 11V6.5a2.5 2.5 0 0 0-5 0V12a7 7 0 0 0 7 7h1" strokeLinecap="round" />
+        <path d="M15 11V6.5a2.5 2.5 0 0 1 5 0V12a7 7 0 0 1-7 7h-1" strokeLinecap="round" />
+      </svg>
+    ),
+    match: (pathname: string) => pathname.startsWith("/vratmitra"),
+  },
+  {
+    label: "Archive",
+    href: "/archive",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="M7 3h10M9 12h6" strokeLinecap="round" />
+      </svg>
+    ),
+    match: (pathname: string) => pathname.startsWith("/archive"),
+  },
+  {
     label: "Ontology Explorer",
     href: "/ontology",
     icon: (
@@ -63,21 +86,9 @@ const navItems = [
     ),
     match: (pathname: string) => pathname.startsWith("/ontology"),
   },
-  {
-    label: "Profile / Settings",
-    href: "/dashboard#profile",
-    sectionId: "profile",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <circle cx="12" cy="8" r="4" />
-        <path d="M5 20c1.5-3 4.5-4 7-4s5.5 1 7 4" strokeLinecap="round" />
-      </svg>
-    ),
-    match: (pathname: string) => pathname === "/dashboard",
-  },
 ];
 
-export function NavigationSidebar({ userName, activeJourneyCount }: SidebarProps) {
+export function NavigationSidebar({ userName, activeJourneyCount, supportedCount = 0 }: SidebarProps) {
   const pathname = usePathname();
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
@@ -108,6 +119,7 @@ export function NavigationSidebar({ userName, activeJourneyCount }: SidebarProps
             (pathname === "/dashboard" && activeSection && item.sectionId === activeSection) ||
             item.match(pathname);
           const isJourneys = item.label === "Active Journeys";
+          const isSupport = item.label === "Vratmitra Support";
 
           return (
             <Link
@@ -148,6 +160,11 @@ export function NavigationSidebar({ userName, activeJourneyCount }: SidebarProps
               {isJourneys ? (
                 <Badge tone="active" className="px-2 py-1 text-xs font-bold">
                   {activeJourneyCount}
+                </Badge>
+              ) : null}
+              {isSupport && supportedCount > 0 ? (
+                <Badge tone="info" className="px-2 py-1 text-xs font-bold">
+                  {supportedCount}
                 </Badge>
               ) : null}
             </Link>

@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { JourneyContent } from "./journey-content";
 import { getTodayReflectionAction, getReflectionsAction } from "@/app/actions/reflection";
-import { getActiveVratmitraAction } from "@/app/actions/vratmitra";
 import { getExposuresAction } from "@/app/actions/exposure";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -24,9 +23,10 @@ export default async function JourneyPage(props: JourneyPageProps) {
   const journey = await prisma.sentenceJourney.findUnique({
     where: { id: params.journeyId },
     include: {
+      user: true,
       sentence: {
         include: {
-          subVirtue: true,
+          subVirtue: { include: { virtue: true } },
         },
       },
       links: {
@@ -41,6 +41,9 @@ export default async function JourneyPage(props: JourneyPageProps) {
       resolutions: {
         orderBy: { createdAt: "desc" },
       },
+      vratmitras: {
+        include: { user: true },
+      },
     },
   });
 
@@ -52,14 +55,22 @@ export default async function JourneyPage(props: JourneyPageProps) {
     );
   }
 
-  if (journey.userId !== session.userId) {
+  const isOwner = journey.userId === session.userId;
+  const activeVratmitra = journey.vratmitras.find((v) => v.userId === session.userId && v.status === "ACTIVE") || null;
+  const isVratmitra = Boolean(activeVratmitra);
+
+  if (!isOwner && !isVratmitra) {
     redirect("/dashboard");
   }
 
   const reflections = await getReflectionsAction(journey.id);
   const todayReflection = await getTodayReflectionAction(journey.id);
-  const activeVratmitra = await getActiveVratmitraAction(journey.id);
   const exposures = await getExposuresAction(journey.id);
+  const detachedVratmitras = await prisma.journeyVratmitra.findMany({
+    where: { journeyId: journey.id, status: "DETACHED" },
+    include: { user: true },
+    orderBy: { detachedAt: "desc" },
+  });
 
   const statusTone: "active" | "paused" | "completed" =
     journey.state === "ACTIVE"
@@ -96,11 +107,14 @@ export default async function JourneyPage(props: JourneyPageProps) {
 
       <JourneyContent
         journey={journey}
-        userId={session.userId}
         reflections={reflections}
         todayReflection={todayReflection}
         activeVratmitra={activeVratmitra}
+        detachedVratmitras={detachedVratmitras}
         exposures={exposures}
+        isOwner={isOwner}
+        isVratmitra={isVratmitra}
+        currentUserId={session.userId}
       />
 
       <div className="mt-8">
