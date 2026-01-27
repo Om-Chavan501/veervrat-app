@@ -9,18 +9,15 @@ import {
   deleteResponseAction,
 } from "@/app/actions/assessment";
 import type { Rating } from "@/generated/prisma/enums";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface AssessmentPageProps {
   params: Promise<{ assessmentId: string }>;
 }
 
 type AssessmentDetails = Awaited<ReturnType<typeof getAssessmentDetailsAction>>;
-
-interface PreviousResponse {
-  rating: Rating;
-  lacunaName: string;
-  completedDate: Date;
-}
 
 export default function AssessmentPage(props: AssessmentPageProps) {
   const router = useRouter();
@@ -30,10 +27,10 @@ export default function AssessmentPage(props: AssessmentPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [completing, setCompleting] = useState(false);
-  const [currentRatings, setCurrentRatings] = useState<Map<string, Rating>>(
-    new Map()
-  );
+  const [currentRatings, setCurrentRatings] = useState<Map<string, Rating>>(new Map());
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [toast, setToast] = useState<string | null>(null);
 
   const [activeTooltipId, setActiveTooltipId] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number }>({
@@ -41,6 +38,8 @@ export default function AssessmentPage(props: AssessmentPageProps) {
     left: 0,
   });
   const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const sentenceRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     props.params.then(setParams);
@@ -54,16 +53,19 @@ export default function AssessmentPage(props: AssessmentPageProps) {
         const data = await getAssessmentDetailsAction(params.assessmentId);
         setAssessment(data);
 
-        // Initialize current ratings from responses
         const ratings = new Map<string, Rating>();
         data.responses.forEach((response) => {
           ratings.set(response.sentenceId, response.rating);
         });
         setCurrentRatings(ratings);
+
+        const sectionState: Record<string, boolean> = {};
+        data.lacuna.lacunaSubVirtues.forEach((lsv) => {
+          sectionState[lsv.id] = true;
+        });
+        setExpandedSections(sectionState);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to load assessment"
-        );
+        setError(err instanceof Error ? err.message : "Failed to load assessment");
       } finally {
         setLoading(false);
       }
@@ -77,7 +79,6 @@ export default function AssessmentPage(props: AssessmentPageProps) {
       setSaving(true);
       const currentRating = currentRatings.get(sentenceId);
 
-      // If clicking the same rating, deselect it
       if (currentRating === rating) {
         await deleteResponseAction(params!.assessmentId, sentenceId);
         setCurrentRatings((prev) => {
@@ -86,14 +87,15 @@ export default function AssessmentPage(props: AssessmentPageProps) {
           return newMap;
         });
       } else {
-        // Otherwise, save the new rating
         await saveResponseAction(params!.assessmentId, sentenceId, rating);
         setCurrentRatings((prev) => new Map(prev).set(sentenceId, rating));
       }
+
+      setToast("Response saved");
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = setTimeout(() => setToast(null), 1800);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to save response"
-      );
+      setError(err instanceof Error ? err.message : "Failed to save response");
     } finally {
       setSaving(false);
     }
@@ -107,12 +109,9 @@ export default function AssessmentPage(props: AssessmentPageProps) {
     try {
       setCompleting(true);
       await completeAssessmentAction(params!.assessmentId);
-      // Redirect to results page
       router.push(`/assessment-results/${params!.assessmentId}`);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to complete assessment"
-      );
+      setError(err instanceof Error ? err.message : "Failed to complete assessment");
       setCompleting(false);
       setShowCompletionModal(false);
     }
@@ -122,13 +121,9 @@ export default function AssessmentPage(props: AssessmentPageProps) {
     setActiveTooltipId(null);
   }, []);
 
-  // Click/touch outside to close tooltip
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      if (
-        tooltipRef.current &&
-        !tooltipRef.current.contains(event.target as Node)
-      ) {
+      if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
         closeTooltip();
       }
     };
@@ -145,48 +140,53 @@ export default function AssessmentPage(props: AssessmentPageProps) {
 
   const openTooltip = useCallback(
     (e: React.MouseEvent<HTMLDivElement>, sentenceId: string) => {
-      // Capture element synchronously to avoid currentTarget becoming null later. [web:42][web:45]
       const el = e.currentTarget as HTMLDivElement | null;
       if (!el) return;
 
-      // Toggle off if clicking same sentence again
       setActiveTooltipId((prev) => {
         const willBeOpen = prev !== sentenceId;
-        if (!willBeOpen) {
-          return null;
-        }
+        if (!willBeOpen) return null;
 
         const rect = el.getBoundingClientRect();
 
-        // Click / tap coordinates
         const clickX = e.clientX || rect.left + rect.width / 2;
         const clickY = e.clientY || rect.top + rect.height / 2;
 
-        const tooltipWidth = 320; // w-80
-        const tooltipHeight = 260; // approximate max height
+        const tooltipWidth = 320;
+        const tooltipHeight = 260;
         const padding = 8;
 
-        let top = clickY + 8 + window.scrollY; // default below click
+        let top = clickY + 8 + window.scrollY;
         let left = clickX - tooltipWidth / 2 + window.scrollX;
 
-        // Clamp horizontally within viewport. [web:21][web:50]
         const maxLeft = window.innerWidth - tooltipWidth - padding;
         if (left < padding) left = padding;
         if (left > maxLeft) left = maxLeft;
 
-        // If going below viewport, flip above trigger. [web:21]
         const viewportBottom = window.scrollY + window.innerHeight;
         if (top + tooltipHeight > viewportBottom - padding) {
           top = rect.top + window.scrollY - tooltipHeight - 8;
         }
 
         setTooltipPosition({ top, left });
-
         return sentenceId;
       });
     },
     []
   );
+
+  const handleSkipToNext = () => {
+    if (!assessment) return;
+    const allSentences = assessment.lacuna.lacunaSubVirtues.flatMap((lsv) => lsv.subVirtue.sentences);
+    const nextUnanswered = allSentences.find((sentence) => !currentRatings.has(sentence.id));
+    if (nextUnanswered) {
+      const target = sentenceRefs.current[nextUnanswered.id];
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      target?.focus();
+    } else {
+      setToast("All sentences are answered");
+    }
+  };
 
   if (loading) {
     return (
@@ -198,7 +198,7 @@ export default function AssessmentPage(props: AssessmentPageProps) {
 
   if (error) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 p-4 rounded">
+      <div className="bg-red-50 border border-red-400 text-red-700 p-4 rounded">
         {error}
       </div>
     );
@@ -218,159 +218,203 @@ export default function AssessmentPage(props: AssessmentPageProps) {
     0
   );
   const answeredCount = currentRatings.size;
+  const completionPercent = Math.round((answeredCount / totalSentences) * 100);
 
   return (
-    <div>
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          {assessment.lacuna.nameEn}
-        </h2>
-        <p className="text-gray-600">{assessment.lacuna.nameMr}</p>
-
-        <div className="mt-4 bg-gray-100 rounded p-3">
-          <p className="text-sm text-gray-700">
-            Progress: <span className="font-bold">{answeredCount}</span> of{" "}
-            <span className="font-bold">{totalSentences}</span> sentences
-            answered
-          </p>
-          {isCompleted && (
-            <p className="text-sm text-green-700 font-medium mt-1">
-              ✓ Assessment completed
-            </p>
-          )}
+    <div className="space-y-6">
+      <div className="card shadow-soft">
+        <div className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#6b6b6b]">Assessment</p>
+            <h2 className="text-3xl font-bold text-[#2c2c2c]">{assessment.lacuna.nameEn}</h2>
+            <p className="text-sm text-[#6b6b6b]">{assessment.lacuna.nameMr}</p>
+          </div>
+          <div className="w-full max-w-md space-y-2 rounded-[14px] border border-[#e5e5e5] bg-[#f7f4ed] p-4 shadow-inner">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold text-[#2c2c2c]">Progress</span>
+              <span className="text-[#6b6b6b]">
+                {answeredCount}/{totalSentences}
+              </span>
+            </div>
+            <Progress value={completionPercent} />
+            <div className="flex items-center justify-between text-xs text-[#6b6b6b]">
+              <span>{completionPercent}% complete</span>
+              <Badge tone={isCompleted ? "completed" : "info"}>
+                {isCompleted ? "Completed" : "In progress"}
+              </Badge>
+            </div>
+          </div>
         </div>
       </div>
 
       {isCompleted && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded">
-          <p className="text-sm text-yellow-800">
-            This assessment is complete and cannot be edited.
-          </p>
+        <div className="rounded-[14px] border border-[#d8d1c6] bg-[#faf6ef] p-4 text-sm text-[#6b6b6b]">
+          This assessment is complete and cannot be edited.
         </div>
       )}
 
-      <div className="space-y-8">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="subtle" onClick={handleSkipToNext} disabled={isCompleted || answeredCount === totalSentences}>
+          Skip for now
+        </Button>
+        <p className="text-xs text-[#6b6b6b]">
+          Highlighted cards are unanswered. Saved responses glow in green.
+        </p>
+      </div>
+
+      <div className="space-y-4">
         {assessment.lacuna.lacunaSubVirtues.map((lacunaSubVirtue) => (
           <section
             key={lacunaSubVirtue.id}
-            className="bg-white rounded-lg border border-gray-200 p-6"
+            className="rounded-[16px] border border-[#e5e5e5] bg-white/90 p-5 shadow-card"
           >
-            <h3 className="text-xl font-bold text-gray-900 mb-1">
-              {lacunaSubVirtue.subVirtue.nameEn}
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              {lacunaSubVirtue.subVirtue.nameMr}
-            </p>
+            <button
+              type="button"
+              onClick={() =>
+                setExpandedSections((prev) => ({
+                  ...prev,
+                  [lacunaSubVirtue.id]: !prev[lacunaSubVirtue.id],
+                }))
+              }
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div>
+                <h3 className="text-xl font-bold text-[#2c2c2c]">
+                  {lacunaSubVirtue.subVirtue.nameEn}
+                </h3>
+                <p className="text-sm text-[#6b6b6b]">{lacunaSubVirtue.subVirtue.nameMr}</p>
+              </div>
+              <Badge tone="info">
+                {expandedSections[lacunaSubVirtue.id] ? "Hide" : "Show"} sentences
+              </Badge>
+            </button>
 
-            <div className="space-y-4">
-              {lacunaSubVirtue.subVirtue.sentences.map((sentence) => {
-                const currentRating = currentRatings.get(sentence.id);
-                const previousResponses =
-                  assessment.previousResponsesBysentenceId?.get(sentence.id) ||
-                  [];
-                const hasPreviousResponses = previousResponses.length > 0;
+            {expandedSections[lacunaSubVirtue.id] && (
+              <div className="mt-4 space-y-4">
+                {lacunaSubVirtue.subVirtue.sentences.map((sentence) => {
+                  const currentRating = currentRatings.get(sentence.id);
+                  const previousResponses =
+                    assessment.previousResponsesBysentenceId?.get(sentence.id) || [];
+                  const hasPreviousResponses = previousResponses.length > 0;
 
-                return (
-                  <div
-                    key={sentence.id}
-                    className="border border-gray-200 rounded p-4 relative"
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <p className="text-sm text-gray-800 font-medium flex-1">
-                        {sentence.textEn}
-                      </p>
-                      {hasPreviousResponses && (
-                        <div
-                          className="relative ml-2 flex-shrink-0 cursor-pointer"
-                          onClick={(e) => openTooltip(e, sentence.id)}
-                        >
-                          <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded hover:bg-blue-200 transition-colors">
-                            Solved Before
-                          </span>
+                  return (
+                    <div
+                      key={sentence.id}
+                      ref={(el) => {
+                        sentenceRefs.current[sentence.id] = el;
+                      }}
+                      tabIndex={-1}
+                      className={`relative rounded-[14px] border p-4 shadow-inner transition ${
+                        currentRating
+                          ? "border-[#c9d8bd] bg-[#f7f4ed]"
+                          : "border-[#d8d1c6] bg-[#fffdfa] shadow-[0_0_0_4px_rgba(196,123,92,0.12)]"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-3 gap-3">
+                        <div className="flex-1 space-y-1">
+                          <p className="text-sm text-[#2c2c2c] font-semibold">
+                            {sentence.textEn}
+                          </p>
+                          <p className="text-xs text-[#6b6b6b]">{sentence.textMr}</p>
                         </div>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-600 mb-4">
-                      {sentence.textMr}
-                    </p>
+                        {hasPreviousResponses && (
+                          <div
+                            className="relative ml-2 flex-shrink-0 cursor-pointer"
+                            onClick={(e) => openTooltip(e, sentence.id)}
+                          >
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f2fd] px-3 py-1 text-xs font-semibold text-[#1c64b0] hover:bg-[#d7e6f7] transition-colors">
+                              <span className="status-dot bg-[#1c64b0]" />
+                              Seen before
+                            </span>
+                          </div>
+                        )}
+                      </div>
 
-                    <div className="flex gap-2 flex-wrap">
-                      {(["ALWAYS", "OFTEN", "RARELY", "NEVER"] as const).map(
-                        (ratingValue) => (
-                          <button
+                      <div className="flex gap-2 flex-wrap">
+                        {(["ALWAYS", "OFTEN", "RARELY", "NEVER"] as const).map((ratingValue) => (
+                          <Button
                             key={ratingValue}
+                            size="sm"
+                            variant={currentRating === ratingValue ? "primary" : "outline"}
                             onClick={() =>
-                              !isCompleted &&
-                              handleRating(sentence.id, ratingValue as Rating)
+                              !isCompleted && handleRating(sentence.id, ratingValue as Rating)
                             }
                             disabled={isCompleted || saving}
-                            className={`px-3 py-2 rounded text-sm font-medium transition ${
-                              currentRating === ratingValue
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            } ${
-                              isCompleted
-                                ? "opacity-50 cursor-not-allowed"
-                                : ""
-                            }`}
+                            className="min-w-[88px]"
+                            icon={
+                              currentRating === ratingValue ? (
+                                <svg
+                                  className="h-4 w-4"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M20 6 9 17l-5-5" />
+                                </svg>
+                              ) : undefined
+                            }
                           >
                             {ratingValue}
-                          </button>
-                        )
-                      )}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
         ))}
       </div>
 
-      {!isCompleted && (
-        <div className="mt-8 flex justify-end">
-          <button
-            onClick={handleCompleteAssessment}
-            disabled={completing || answeredCount === 0}
-            className={`px-6 py-3 rounded font-medium transition ${
-              answeredCount === 0
-                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                : "bg-green-600 text-white hover:bg-green-700"
-            }`}
-          >
-            {completing ? "Completing..." : "Complete Assessment"}
-          </button>
+      <div className="sticky bottom-0 left-0 right-0 z-20 border-t border-[#e5e5e5] bg-white/90 backdrop-blur-lg">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-[#2c2c2c]">
+              {answeredCount} of {totalSentences} answered
+            </p>
+            <p className="text-xs text-[#6b6b6b]">
+              You can save and exit anytime. Completion needs at least one answer.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button variant="ghost" onClick={() => router.push("/dashboard")} disabled={saving}>
+              Save &amp; Exit
+            </Button>
+            {isCompleted ? (
+              <Button asChild variant="secondary">
+                <a href={`/assessment-results/${assessment.id}`}>View Results</a>
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                onClick={handleCompleteAssessment}
+                disabled={completing || answeredCount === 0}
+                loading={completing}
+              >
+                Complete Assessment
+              </Button>
+            )}
+          </div>
         </div>
-      )}
+      </div>
 
-      {isCompleted && (
-        <div className="mt-8 flex justify-end">
-          <a
-            href={`/assessment-results/${assessment.id}`}
-            className="px-6 py-3 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition"
-          >
-            View Results
-          </a>
-        </div>
-      )}
-
-      {/* Completion Confirmation Modal */}
       {showCompletionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-8 max-w-md w-full shadow-lg">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Complete Assessment?
-            </h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Complete Assessment?</h3>
 
             <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6">
               <p className="text-sm text-gray-700">
                 <span className="font-bold">{answeredCount}</span> out of{" "}
-                <span className="font-bold">{totalSentences}</span> sentences
-                have been answered.
+                <span className="font-bold">{totalSentences}</span> sentences have been answered.
               </p>
               <p className="text-xs text-gray-600 mt-2">
-                ℹ️ You must answer at least one sentence to proceed. Answering
-                all sentences is not mandatory.
+                ℹ️ You must answer at least one sentence to proceed. Answering all sentences is not
+                mandatory.
               </p>
             </div>
 
@@ -394,7 +438,16 @@ export default function AssessmentPage(props: AssessmentPageProps) {
         </div>
       )}
 
-      {/* Persistent, mobile-friendly tooltip */}
+      {toast && (
+        <div
+          className="fixed bottom-6 right-6 rounded-[12px] border border-[#c9d8bd] bg-[#e7f0df] px-4 py-3 text-sm text-[#2d5a1a] shadow-soft"
+          role="status"
+          aria-live="polite"
+        >
+          {toast}
+        </div>
+      )}
+
       {activeTooltipId && assessment && (
         <div
           ref={tooltipRef}
@@ -411,61 +464,41 @@ export default function AssessmentPage(props: AssessmentPageProps) {
               className="text-gray-400 hover:text-white hover:bg-gray-700 rounded-full p-1 transition-all"
               aria-label="Close tooltip"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
           <div className="space-y-3 max-h-60 overflow-y-auto">
-            {assessment.previousResponsesBysentenceId?.get(
-              activeTooltipId
-            )?.length ? (
-              assessment.previousResponsesBysentenceId
-                ?.get(activeTooltipId)
-                ?.map((prevResp, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 bg-gray-800/50 rounded-lg border border-gray-600"
-                  >
-                    <div className="flex justify-between items-start mb-1">
-                      <span
-                        className={`font-bold text-sm ${
-                          prevResp.rating === "ALWAYS"
-                            ? "text-green-400"
-                            : prevResp.rating === "OFTEN"
-                            ? "text-blue-400"
-                            : prevResp.rating === "RARELY"
-                            ? "text-yellow-400"
-                            : "text-red-400"
-                        }`}
-                      >
-                        {prevResp.rating}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {prevResp.assessment.completedAt?.toLocaleDateString()}
-                      </span>
-                    </div>
-                    <p className="text-xs">
-                      <span className="font-medium">Lacuna:</span>{" "}
-                      {prevResp.assessment.lacuna.nameEn}
-                    </p>
+            {assessment.previousResponsesBysentenceId?.get(activeTooltipId)?.length ? (
+              assessment.previousResponsesBysentenceId?.get(activeTooltipId)?.map((prevResp, idx) => (
+                <div key={idx} className="p-3 bg-gray-800/50 rounded-lg border border-gray-600">
+                  <div className="flex justify-between items-start mb-1">
+                    <span
+                      className={`font-bold text-sm ${
+                        prevResp.rating === "ALWAYS"
+                          ? "text-green-400"
+                          : prevResp.rating === "OFTEN"
+                          ? "text-blue-400"
+                          : prevResp.rating === "RARELY"
+                          ? "text-yellow-400"
+                          : "text-red-400"
+                      }`}
+                    >
+                      {prevResp.rating}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {prevResp.assessment.completedAt?.toLocaleDateString()}
+                    </span>
                   </div>
-                ))
+                  <p className="text-xs">
+                    <span className="font-medium">Lacuna:</span> {prevResp.assessment.lacuna.nameEn}
+                  </p>
+                </div>
+              ))
             ) : (
-              <p className="text-gray-400 text-xs italic">
-                No previous responses found
-              </p>
+              <p className="text-gray-400 text-xs italic">No previous responses found</p>
             )}
           </div>
         </div>

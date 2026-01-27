@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { addExposureAction, updateExposureAction } from "@/app/actions/exposure";
+import { TextAreaField } from "@/components/ui/field";
+import { Button } from "@/components/ui/button";
 import type { ExposureInstance } from "@/generated/prisma/client";
 
 interface ExposureFormProps {
@@ -66,76 +68,53 @@ export function ExposureForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg bg-gray-50 p-4">
-      <div>
-        <label
-          htmlFor="description"
-          className="block text-sm font-medium text-gray-700"
-        >
-          What did you experience?
-        </label>
-        <textarea
-          id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Describe your exposure experience..."
-          required
-          disabled={isLoading}
-          rows={3}
-          className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
-        />
-        <p className="mt-1 text-xs text-gray-500">Be specific about the situation and what you did.</p>
-      </div>
-
-      <div>
-        <label
-          htmlFor="contextNote"
-          className="block text-sm font-medium text-gray-700"
-        >
-          Context (optional)
-        </label>
-        <textarea
-          id="contextNote"
-          value={contextNote}
-          onChange={(e) => setContextNote(e.target.value)}
-          placeholder="Any additional context or reflections..."
-          disabled={isLoading}
-          rows={2}
-          className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
-        />
-      </div>
-
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={isLoading || !description}
-          className="flex-1 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-400"
-        >
-          {isLoading ? "Saving..." : isEditing ? "Update Exposure" : "Add Exposure"}
-        </button>
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isLoading}
-            className="rounded bg-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-400 disabled:bg-gray-200"
-          >
-            Cancel
-          </button>
-        )}
-      </div>
-
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-[14px] border border-[#e5e5e5] bg-white px-4 py-4 shadow-inner">
       {message && (
         <div
-          className={`rounded p-3 text-sm ${
+          className={`rounded-[12px] border px-3 py-2 text-sm ${
             message.type === "success"
-              ? "bg-green-50 text-green-800"
-              : "bg-red-50 text-red-800"
+              ? "border-[#c9d8bd] bg-[#e7f0df] text-[#2d5a1a]"
+              : "border-[#e57373] bg-[#fdecec] text-[#8d2f2f]"
           }`}
         >
           {message.text}
         </div>
       )}
+
+      <TextAreaField
+        id="description"
+        label="What did you experience?"
+        hint="Be specific about the situation and what you did."
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Describe your exposure experience..."
+        required
+        disabled={isLoading}
+        rows={3}
+      />
+
+      <TextAreaField
+        id="contextNote"
+        label="Context (optional)"
+        hint="Any additional context or reflections."
+        value={contextNote}
+        onChange={(e) => setContextNote(e.target.value)}
+        placeholder="Optional details or feelings."
+        disabled={isLoading}
+        rows={2}
+        optional
+      />
+
+      <div className="flex gap-2">
+        <Button type="submit" variant="secondary" className="flex-1" disabled={isLoading || !description} loading={isLoading}>
+          {isEditing ? "Update Exposure" : "Add Exposure"}
+        </Button>
+        {onCancel && (
+          <Button type="button" variant="ghost" onClick={onCancel} disabled={isLoading}>
+            Cancel
+          </Button>
+        )}
+      </div>
     </form>
   );
 }

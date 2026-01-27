@@ -8,11 +8,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
+      {/* 
+        Use Tailwind's antialiased and any other global classes if needed.
+        No need to reference font variables/classes — your fonts are set in CSS!
+      */}
       <body className="antialiased">
         {children}
       </body>

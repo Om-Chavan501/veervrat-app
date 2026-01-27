@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createReflectionAction,
   updateReflectionAction,
   deleteReflectionAction,
 } from "@/app/actions/reflection";
+import { TextAreaField } from "@/components/ui/field";
+import { Button } from "@/components/ui/button";
 
 interface ReflectionFormProps {
   journeyId: string;
@@ -29,6 +31,7 @@ export function ReflectionForm({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [draftSaved, setDraftSaved] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     applied: existingReflection?.applied ?? false,
@@ -36,6 +39,22 @@ export function ReflectionForm({
     insightNote: existingReflection?.insightNote || "",
     difficulty: existingReflection?.difficulty?.toString() || "",
   });
+
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(`reflection-draft-${journeyId}`);
+    if (savedDraft && !existingReflection) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        setFormData((prev) => ({
+          ...prev,
+          ...parsed,
+        }));
+        setDraftSaved("Draft restored");
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }, [journeyId, existingReflection]);
 
   const isDisabled = journeyState !== "ACTIVE";
   const isEditable = !!existingReflection && !isDisabled;
@@ -100,6 +119,19 @@ export function ReflectionForm({
     }
   };
 
+  const handleSaveDraft = () => {
+    localStorage.setItem(
+      `reflection-draft-${journeyId}`,
+      JSON.stringify({
+        contextNote: formData.contextNote,
+        insightNote: formData.insightNote,
+        applied: formData.applied,
+        difficulty: formData.difficulty,
+      })
+    );
+    setDraftSaved("Draft saved locally");
+  };
+
   // If journey is not active and no reflection exists
   if (isDisabled && !existingReflection) {
     return null;
@@ -119,13 +151,21 @@ export function ReflectionForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded">
+        <div
+          className="rounded-[12px] border border-[#e57373] bg-[#fdecec] px-4 py-3 text-sm text-[#8d2f2f]"
+          role="alert"
+        >
           {error}
         </div>
       )}
 
-      {/* Applied Today Toggle */}
-      <div className="flex items-center gap-3">
+      {draftSaved && (
+        <div className="rounded-[12px] border border-[#c9d8bd] bg-[#e7f0df] px-4 py-3 text-sm text-[#2d5a1a]">
+          {draftSaved}
+        </div>
+      )}
+
+      <div className="flex items-center gap-3 rounded-[12px] border border-[#e5e5e5] bg-white px-4 py-3 shadow-inner">
         <input
           type="checkbox"
           id="appliedToday"
@@ -134,74 +174,84 @@ export function ReflectionForm({
             setFormData({ ...formData, applied: e.target.checked })
           }
           disabled={isLoading || isDisabled}
-          className="w-5 h-5"
+          className="h-5 w-5 rounded border-[#d8d1c6] text-[#6b8e4e] focus:ring-[#6b8e4e]"
         />
         <label
           htmlFor="appliedToday"
-          className="text-base font-medium text-gray-900 cursor-pointer"
+          className="text-sm font-semibold text-[#2c2c2c] cursor-pointer"
         >
           I applied this sentence today
         </label>
       </div>
 
-      {/* Context */}
-      <div>
-        <label className="block text-sm font-bold text-gray-900 mb-2">
-          What happened? (Context)
-        </label>
-        <textarea
-          value={formData.contextNote}
-          onChange={(e) =>
-            setFormData({ ...formData, contextNote: e.target.value })
-          }
-          placeholder="Describe the situation or moment where you worked with this sentence today..."
-          rows={3}
-          disabled={isLoading || isDisabled}
-          className="w-full border border-gray-300 rounded px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
-        />
-      </div>
+      <TextAreaField
+        id="contextNote"
+        label="What happened? (Context)"
+        hint="Describe the situation and what you did."
+        value={formData.contextNote}
+        onChange={(e) =>
+          setFormData({ ...formData, contextNote: e.target.value })
+        }
+        placeholder="Describe the situation or moment where you worked with this sentence today..."
+        rows={4}
+        disabled={isLoading || isDisabled}
+        error={error?.toLowerCase().includes("context") ? error : undefined}
+      />
 
-      {/* Insight Gained */}
-      <div>
-        <label className="block text-sm font-bold text-gray-900 mb-2">
-          What insight did you gain?
-        </label>
-        <textarea
-          value={formData.insightNote}
-          onChange={(e) =>
-            setFormData({ ...formData, insightNote: e.target.value })
-          }
-          placeholder="What did you learn about yourself, the sentence, or the work today?"
-          rows={3}
-          disabled={isLoading || isDisabled}
-          className="w-full border border-gray-300 rounded px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
-        />
-      </div>
+      <TextAreaField
+        id="insightNote"
+        label="What insight did you gain?"
+        hint="What did you notice about yourself, the sentence, or the practice?"
+        value={formData.insightNote}
+        onChange={(e) =>
+          setFormData({ ...formData, insightNote: e.target.value })
+        }
+        placeholder="What did you learn about yourself, the sentence, or the work today?"
+        rows={4}
+        disabled={isLoading || isDisabled}
+        error={error?.toLowerCase().includes("insight") ? error : undefined}
+      />
 
-      {/* Difficulty Faced (Optional) */}
-      <div>
-        <label className="block text-sm font-bold text-gray-900 mb-2">
-          What difficulty did you face? (Optional, 1-10 scale)
-        </label>
+      <div className="space-y-2 rounded-[12px] border border-[#e5e5e5] bg-white px-4 py-3 shadow-inner">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-[#2c2c2c]">
+            What difficulty did you face? (Optional)
+          </label>
+          <span className="text-xs text-[#6b6b6b]">
+            {formData.difficulty ? `${formData.difficulty}/10` : "—"}
+          </span>
+        </div>
         <input
-          type="number"
+          type="range"
           min="1"
           max="10"
-          value={formData.difficulty}
+          step="1"
+          value={formData.difficulty || "5"}
           onChange={(e) =>
             setFormData({ ...formData, difficulty: e.target.value })
           }
-          placeholder="Rate difficulty from 1 (easy) to 10 (very hard)"
           disabled={isLoading || isDisabled}
-          className="w-full border border-gray-300 rounded px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+          className="w-full accent-[#6b8e4e]"
         />
+        <p className="text-xs text-[#6b6b6b]">
+          Slide to rate the effort needed today.
+        </p>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-4 justify-center">
+      <div className="flex flex-wrap gap-3">
+        <Button
+          type="button"
+          variant="subtle"
+          onClick={handleSaveDraft}
+          disabled={isLoading || isDisabled}
+        >
+          Save Draft
+        </Button>
+
         {existingReflection && isEditing && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => {
               setIsEditing(false);
               setError(null);
@@ -213,27 +263,27 @@ export function ReflectionForm({
               });
             }}
             disabled={isLoading}
-            className="px-6 py-3 border border-gray-300 text-gray-700 rounded font-medium hover:bg-gray-50 transition disabled:opacity-50"
           >
             Cancel
-          </button>
+          </Button>
         )}
 
         {existingReflection && isEditing && (
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={handleDelete}
             disabled={isLoading}
-            className="px-6 py-3 border border-red-300 text-red-700 rounded font-medium hover:bg-red-50 transition disabled:opacity-50"
           >
             Delete
-          </button>
+          </Button>
         )}
 
-        <button
+        <Button
           type="submit"
+          variant="primary"
           disabled={isLoading || isDisabled}
-          className="px-6 py-3 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition disabled:opacity-50"
+          loading={isLoading}
         >
           {isLoading
             ? existingReflection
@@ -244,19 +294,18 @@ export function ReflectionForm({
             : existingReflection
             ? "Edit"
             : "Save Reflection"}
-        </button>
+        </Button>
       </div>
 
-      {/* Edit Button for Existing */}
       {existingReflection && !isEditing && (
-        <div className="flex justify-center">
-          <button
+        <div className="flex justify-start">
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => setIsEditing(true)}
-            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
           >
-            Edit today's reflection
-          </button>
+            Edit today&apos;s reflection
+          </Button>
         </div>
       )}
     </form>
