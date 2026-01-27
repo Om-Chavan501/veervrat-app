@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 
@@ -15,6 +16,7 @@ const navItems = [
   {
     label: "Dashboard",
     href: "/dashboard",
+    sectionId: "hero",
     icon: (
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-4v-6H8v6H4a1 1 0 0 1-1-1z" strokeLinecap="round" strokeLinejoin="round" />
@@ -25,6 +27,7 @@ const navItems = [
   {
     label: "My Assessments",
     href: "/lacunae",
+    sectionId: "assessments",
     icon: (
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M6 4h12a2 2 0 0 1 2 2v12l-5-3-5 3-5-3v-9a2 2 0 0 1 2-2z" strokeLinecap="round" strokeLinejoin="round" />
@@ -38,6 +41,7 @@ const navItems = [
   {
     label: "Active Journeys",
     href: "/dashboard#journeys",
+    sectionId: "journeys",
     icon: (
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M4 10.5 12 5l8 5.5-8 5.5-8-5.5Z" strokeLinecap="round" strokeLinejoin="round" />
@@ -62,6 +66,7 @@ const navItems = [
   {
     label: "Profile / Settings",
     href: "/dashboard#profile",
+    sectionId: "profile",
     icon: (
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
         <circle cx="12" cy="8" r="4" />
@@ -74,9 +79,19 @@ const navItems = [
 
 export function NavigationSidebar({ userName, activeJourneyCount }: SidebarProps) {
   const pathname = usePathname();
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<{ sectionId: string }>;
+      setActiveSection(custom.detail.sectionId);
+    };
+    window.addEventListener("veervrat-section-change", handler as EventListener);
+    return () => window.removeEventListener("veervrat-section-change", handler as EventListener);
+  }, []);
 
   return (
-    <aside className="hidden lg:flex lg:w-72 lg:flex-col lg:border-r lg:border-[#e5e5e5] lg:bg-white/80 lg:backdrop-blur-lg lg:shadow-[12px_0_40px_rgba(44,44,44,0.06)]">
+    <aside className="sticky top-0 hidden max-h-screen w-72 flex-col overflow-y-auto self-start border-r border-[#e5e5e5] bg-white/80 backdrop-blur-lg shadow-[12px_0_40px_rgba(44,44,44,0.06)] lg:flex">
       <div className="flex items-center gap-3 px-6 py-6">
         <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-[#6b8e4e] to-[#c47b5c] shadow-soft flex items-center justify-center text-white font-bold">
           VV
@@ -89,13 +104,25 @@ export function NavigationSidebar({ userName, activeJourneyCount }: SidebarProps
 
       <nav className="flex-1 px-3 pb-6 space-y-1">
         {navItems.map((item) => {
-          const isActive = item.match(pathname);
+          const isActive =
+            (pathname === "/dashboard" && activeSection && item.sectionId === activeSection) ||
+            item.match(pathname);
           const isJourneys = item.label === "Active Journeys";
 
           return (
             <Link
               key={item.href}
               href={item.href}
+              onClick={(e) => {
+                if (item.sectionId && pathname === "/dashboard") {
+                  e.preventDefault();
+                  const target =
+                    document.querySelector(`[data-section="${item.sectionId}"]`) ||
+                    document.querySelector(item.href);
+                  target?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  window.history.pushState(null, "", item.href);
+                }
+              }}
               className={cn(
                 "group flex items-center justify-between rounded-[12px] px-3.5 py-3 text-sm font-semibold transition hover:bg-[#f4f1ea] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6b8e4e]",
                 isActive

@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { NavigationSidebar } from "@/components/navigation/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
+import { MobileTabBar } from "@/components/navigation/mobile-tab-bar";
+import { SmoothScrollHandler } from "@/components/smooth-scroll-handler";
 
 export default async function AppLayout({
   children,
@@ -28,6 +29,7 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-screen text-[#2c2c2c]">
+      <SmoothScrollHandler />
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_20%,#fff7ed,transparent_25%),radial-gradient(circle_at_80%_0%,#eaf0e2,transparent_28%),radial-gradient(circle_at_50%_80%,#f7ede4,transparent_32%)]" />
       <div className="absolute inset-x-0 top-0 -z-10 h-32 bg-gradient-to-b from-white/70 via-white/40 to-transparent" />
 
@@ -66,26 +68,6 @@ export default async function AppLayout({
                 </form>
               </div>
 
-              <div className="flex w-full flex-wrap gap-2 lg:hidden">
-                <Link
-                  href="/dashboard"
-                  className="flex-1 rounded-[12px] border border-[#e5e5e5] bg-white px-4 py-3 text-sm font-semibold text-[#2c2c2c] shadow-card hover:border-[#6b8e4e] hover:text-[#56723f]"
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/lacunae"
-                  className="flex-1 rounded-[12px] border border-[#e5e5e5] bg-white px-4 py-3 text-sm font-semibold text-[#2c2c2c] shadow-card hover:border-[#6b8e4e] hover:text-[#56723f]"
-                >
-                  Assessments
-                </Link>
-                <Link
-                  href="/dashboard#journeys"
-                  className="flex-1 rounded-[12px] border border-[#e5e5e5] bg-white px-4 py-3 text-sm font-semibold text-[#2c2c2c] shadow-card hover:border-[#6b8e4e] hover:text-[#56723f]"
-                >
-                  Journeys
-                </Link>
-              </div>
             </div>
           </header>
 
@@ -96,6 +78,7 @@ export default async function AppLayout({
           </main>
         </div>
       </div>
+      <MobileTabBar />
     </div>
   );
 }

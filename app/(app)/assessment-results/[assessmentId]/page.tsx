@@ -7,9 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { CompletionToast } from "@/components/ui/completion-toast";
 
 interface AssessmentResultsPageProps {
   params: Promise<{ assessmentId: string }>;
+  searchParams: Promise<{ completed?: string }>;
 }
 
 type Suggestion = {
@@ -32,7 +34,8 @@ export default async function AssessmentResultsPage(props: AssessmentResultsPage
     redirect("/login");
   }
 
-  const params = await props.params;
+  const [params, searchParams] = await Promise.all([props.params, props.searchParams]);
+  const completedToast = searchParams.completed === "true";
 
   const assessment = await prisma.lacunaAssessment.findUnique({
     where: { id: params.assessmentId },
@@ -106,6 +109,7 @@ export default async function AssessmentResultsPage(props: AssessmentResultsPage
 
   return (
     <div className="space-y-8">
+      <CompletionToast show={completedToast} message="Assessment completed! Here are your suggestions." />
       <Card className="shadow-soft">
         <div className="flex flex-col gap-3 p-6 md:flex-row md:items-center md:justify-between md:p-8">
           <div>

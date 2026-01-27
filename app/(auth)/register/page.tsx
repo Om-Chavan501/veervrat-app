@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { registerAction } from "@/app/actions/auth";
+import { RegisterForm } from "@/components/auth/register-form";
 
 interface RegisterPageProps {
   searchParams: Promise<{ error?: string }>;
 }
 
 export default async function RegisterPage(props: RegisterPageProps) {
-  // If already logged in, redirect to dashboard
   const session = await getSession();
   if (session) {
     redirect("/dashboard");
@@ -18,112 +17,24 @@ export default async function RegisterPage(props: RegisterPageProps) {
   const error = searchParams.error ? decodeURIComponent(searchParams.error) : null;
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-          Veervrat
-        </h1>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_20%_20%,#fff7ed,transparent_25%),radial-gradient(circle_at_80%_0%,#eaf0e2,transparent_28%),radial-gradient(circle_at_50%_80%,#f7ede4,transparent_32%)] px-4">
+      <div className="w-full max-w-md rounded-[20px] border border-[#e5e5e5] bg-white p-8 shadow-soft">
+        <div className="mb-6 space-y-2 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#6b8e4e] to-[#c47b5c] text-white shadow-soft">
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12a7 7 0 0 1 7-7 7 7 0 0 1 7 7c0 4-7 9-7 9s-7-5-7-9Z" />
+              <path d="M12 9v3l2 2" />
+            </svg>
           </div>
-        )}
+          <h1 className="text-2xl font-bold text-[#2c2c2c]">Create your account</h1>
+          <p className="text-sm text-[#6b6b6b]">Slow, clear steps toward inner strength</p>
+        </div>
 
-        <form action={registerAction} className="space-y-4">
-          <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Full Name
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg
-                         focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         text-gray-900 placeholder-gray-400"
-              placeholder="Your Name"
-            />
-          </div>
+        <RegisterForm error={error} />
 
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg
-                         focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         text-gray-900 placeholder-gray-400"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              required
-              minLength={8}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg
-                         focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         text-gray-900 placeholder-gray-400"
-              placeholder="••••••••"
-            />
-            <p className="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
-          </div>
-
-          <div>
-            <label
-              htmlFor="confirmPassword"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Confirm Password
-            </label>
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              required
-              minLength={8}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg
-                         focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         text-gray-900 placeholder-gray-400"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium"
-          >
-            Create Account
-          </button>
-        </form>
-
-        <p className="mt-4 text-center text-sm text-gray-600">
+        <p className="mt-6 text-center text-sm text-[#6b6b6b]">
           Already have an account?{" "}
-          <Link
-            href="/login"
-            className="text-blue-600 hover:underline font-medium"
-          >
+          <Link href="/login" className="font-semibold text-[#6b8e4e] hover:text-[#56723f]">
             Sign In
           </Link>
         </p>

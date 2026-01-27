@@ -29,8 +29,10 @@ export default function AssessmentPage(props: AssessmentPageProps) {
   const [completing, setCompleting] = useState(false);
   const [currentRatings, setCurrentRatings] = useState<Map<string, Rating>>(new Map());
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completionData, setCompletionData] = useState<{ answered: number; total: number } | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState<string | null>(null);
+  const [skipPulse, setSkipPulse] = useState(false);
 
   const [activeTooltipId, setActiveTooltipId] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number }>({
@@ -40,6 +42,7 @@ export default function AssessmentPage(props: AssessmentPageProps) {
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const sentenceRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pulseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     props.params.then(setParams);
@@ -74,6 +77,21 @@ export default function AssessmentPage(props: AssessmentPageProps) {
     loadAssessment();
   }, [params]);
 
+  const resetSkipPulse = useCallback(() => {
+    setSkipPulse(false);
+    if (pulseTimeoutRef.current) {
+      clearTimeout(pulseTimeoutRef.current);
+    }
+    pulseTimeoutRef.current = setTimeout(() => setSkipPulse(true), 30000);
+  }, []);
+
+  useEffect(() => {
+    resetSkipPulse();
+    return () => {
+      if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
+    };
+  }, [resetSkipPulse]);
+
   const handleRating = async (sentenceId: string, rating: Rating) => {
     try {
       setSaving(true);
@@ -94,6 +112,7 @@ export default function AssessmentPage(props: AssessmentPageProps) {
       setToast("Response saved");
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
       toastTimeoutRef.current = setTimeout(() => setToast(null), 1800);
+      resetSkipPulse();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save response");
     } finally {
@@ -102,18 +121,22 @@ export default function AssessmentPage(props: AssessmentPageProps) {
   };
 
   const handleCompleteAssessment = async () => {
-    setShowCompletionModal(true);
-  };
-
-  const handleConfirmCompletion = async () => {
     try {
       setCompleting(true);
       await completeAssessmentAction(params!.assessmentId);
-      router.push(`/assessment-results/${params!.assessmentId}`);
+      setCompletionData({
+        answered: currentRatings.size,
+        total: assessment?.lacuna.lacunaSubVirtues.reduce(
+          (sum, lsv) => sum + lsv.subVirtue.sentences.length,
+          0
+        ) ?? 0,
+      });
+      setAssessment((prev) => (prev ? { ...prev, status: "COMPLETED" } : prev));
+      setShowCompletionModal(true);
+      setCompleting(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to complete assessment");
       setCompleting(false);
-      setShowCompletionModal(false);
     }
   };
 
@@ -185,6 +208,7 @@ export default function AssessmentPage(props: AssessmentPageProps) {
       target?.focus();
     } else {
       setToast("All sentences are answered");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -219,6 +243,7 @@ export default function AssessmentPage(props: AssessmentPageProps) {
   );
   const answeredCount = currentRatings.size;
   const completionPercent = Math.round((answeredCount / totalSentences) * 100);
+  const remaining = totalSentences - answeredCount;
 
   return (
     <div className="space-y-6">
@@ -254,8 +279,15 @@ export default function AssessmentPage(props: AssessmentPageProps) {
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button variant="subtle" onClick={handleSkipToNext} disabled={isCompleted || answeredCount === totalSentences}>
-          Skip for now
+        <Button
+          variant="subtle"
+          onClick={handleSkipToNext}
+          disabled={isCompleted}
+          className={skipPulse && !isCompleted ? "animate-pulse" : ""}
+        >
+          {remaining > 0
+            ? `Skip to Next Unanswered (${remaining} remaining)`
+            : "Review All Responses"}
         </Button>
         <p className="text-xs text-[#6b6b6b]">
           Highlighted cards are unanswered. Saved responses glow in green.
@@ -330,37 +362,37 @@ export default function AssessmentPage(props: AssessmentPageProps) {
                         )}
                       </div>
 
-                      <div className="flex gap-2 flex-wrap">
-                        {(["ALWAYS", "OFTEN", "RARELY", "NEVER"] as const).map((ratingValue) => (
-                          <Button
-                            key={ratingValue}
-                            size="sm"
-                            variant={currentRating === ratingValue ? "primary" : "outline"}
-                            onClick={() =>
-                              !isCompleted && handleRating(sentence.id, ratingValue as Rating)
-                            }
-                            disabled={isCompleted || saving}
-                            className="min-w-[88px]"
-                            icon={
-                              currentRating === ratingValue ? (
-                                <svg
-                                  className="h-4 w-4"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              ) : undefined
-                            }
-                          >
-                            {ratingValue}
-                          </Button>
-                        ))}
-                      </div>
+                    <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-2">
+                      {(["ALWAYS", "OFTEN", "RARELY", "NEVER"] as const).map((ratingValue) => (
+                        <Button
+                          key={ratingValue}
+                          size="sm"
+                          variant={currentRating === ratingValue ? "primary" : "outline"}
+                          onClick={() =>
+                            !isCompleted && handleRating(sentence.id, ratingValue as Rating)
+                          }
+                          disabled={isCompleted || saving}
+                          className="min-w-[120px] sm:min-w-[88px] min-h-[48px]"
+                          icon={
+                            currentRating === ratingValue ? (
+                              <svg
+                                className="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M20 6 9 17l-5-5" />
+                              </svg>
+                            ) : undefined
+                          }
+                        >
+                          {ratingValue}
+                        </Button>
+                      ))}
+                    </div>
                     </div>
                   );
                 })}
@@ -402,37 +434,53 @@ export default function AssessmentPage(props: AssessmentPageProps) {
         </div>
       </div>
 
-      {showCompletionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full shadow-lg">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Complete Assessment?</h3>
-
-            <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6">
-              <p className="text-sm text-gray-700">
-                <span className="font-bold">{answeredCount}</span> out of{" "}
-                <span className="font-bold">{totalSentences}</span> sentences have been answered.
-              </p>
-              <p className="text-xs text-gray-600 mt-2">
-                ℹ️ You must answer at least one sentence to proceed. Answering all sentences is not
-                mandatory.
-              </p>
+      {showCompletionModal && completionData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-[20px] border border-[#e5e5e5] bg-white p-6 shadow-soft fade-in">
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#e7f0df] text-[#2d5a1a] shadow-inner">
+                <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M8 12.5 11 15l5-6" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-[#2c2c2c]">Assessment Complete!</h3>
+                <p className="text-sm text-[#6b6b6b]">
+                  You answered {completionData.answered} of {completionData.total} sentences.
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-3">
-              <button
-                onClick={handleConfirmCompletion}
+            <div className="mt-4 space-y-3">
+              <Progress value={(completionData.answered / completionData.total) * 100} />
+              <div className="rounded-[14px] border border-[#e5e5e5] bg-[#f7f4ed] p-4 shadow-inner space-y-2">
+                <p className="text-sm font-semibold text-[#2c2c2c]">What happens next?</p>
+                <ol className="list-decimal list-inside space-y-1 text-sm text-[#4a4a4a]">
+                  <li>Review your suggestions</li>
+                  <li>Choose a sentence to practice</li>
+                  <li>Begin your journey</li>
+                </ol>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => router.push("/dashboard")}
                 disabled={completing}
-                className="w-full bg-green-600 text-white py-2 rounded font-medium hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {completing ? "Completing..." : "Yes, Complete Assessment"}
-              </button>
-              <button
-                onClick={() => setShowCompletionModal(false)}
-                disabled={completing}
-                className="w-full bg-gray-200 text-gray-900 py-2 rounded font-medium hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                Save &amp; Exit
+              </Button>
+              <Button
+                variant="primary"
+                loading={completing}
+                onClick={() =>
+                  router.push(`/assessment-results/${params?.assessmentId}?completed=true`)
+                }
               >
-                Cancel
-              </button>
+                View My Results
+              </Button>
             </div>
           </div>
         </div>

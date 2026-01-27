@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getPendingInvitationsAction, acceptVratmitraInvitationAction, detachVratmitraAction } from "@/app/actions/vratmitra";
 import Link from "next/link";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { JourneyVratmitra } from "@/generated/prisma/client";
 
 interface PendingInvitation extends JourneyVratmitra {
@@ -108,9 +109,11 @@ export function PendingVratmitraInvitations() {
 
   if (invitations.length === 0) {
     return (
-      <div className="text-center text-gray-600">
-        <p>No pending Vratmitra invitations.</p>
-      </div>
+      <EmptyState
+        icon={<HandsIcon />}
+        title="No companion invitations"
+        description="Vratmitras offer read-only support for your journey. You can invite them later."
+      />
     );
   }
 
@@ -182,5 +185,14 @@ export function PendingVratmitraInvitations() {
         ))}
       </div>
     </div>
+  );
+}
+
+function HandsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M9 11V6.5a2.5 2.5 0 0 0-5 0V12a7 7 0 0 0 7 7h1" strokeLinecap="round" />
+      <path d="M15 11V6.5a2.5 2.5 0 0 1 5 0V12a7 7 0 0 1-7 7h-1" strokeLinecap="round" />
+    </svg>
   );
 }
