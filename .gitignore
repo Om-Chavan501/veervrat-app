@@ -44,3 +44,6 @@ next-env.d.ts
 /generated/prisma
 
 node_modules
+.vite
+
+__pycache__
