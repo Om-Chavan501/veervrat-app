@@ -14,16 +14,16 @@ import { PageLoader } from '../components/ui/LoadingSpinner'
 import { getErrorMessage } from '../api/client'
 import type { Lacuna, LacunaCategory } from '../types'
 
-const categoryColors: Record<LacunaCategory, string> = {
-  A: 'danger',
+const categoryColors: Record<LacunaCategory, 'default' | 'warning' | 'info'> = {
+  A: 'default',
   B: 'warning',
   C: 'info',
 }
 
 const categoryLabels: Record<LacunaCategory, string> = {
-  A: 'Category A — Primary',
-  B: 'Category B — Secondary',
-  C: 'Category C — Supporting',
+  A: 'Primary Lacunae',
+  B: 'Secondary Lacunae',
+  C: 'Supporting Lacunae',
 }
 
 export function Lacunae() {
@@ -221,7 +221,7 @@ export function Lacunae() {
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <Badge variant={categoryColors[lacuna.category] as 'danger' | 'warning' | 'info'}>
+                        <Badge variant={categoryColors[lacuna.category]}>
                           {lacuna.category}
                         </Badge>
                         {isSelected && (

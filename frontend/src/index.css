@@ -11,6 +11,7 @@
     -webkit-text-size-adjust: 100%;
     font-feature-settings: "cv11", "ss01";
     font-variation-settings: "opsz" 32;
+    scroll-behavior: smooth;
   }
 
   body {
@@ -27,8 +28,8 @@
   }
 
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
 
   ::-webkit-scrollbar-track {
@@ -36,18 +37,81 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: theme('colors.stone.300');
-    border-radius: 3px;
+    background: theme('colors.warm.300');
+    border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: theme('colors.stone.400');
+    background: theme('colors.warm.400');
+  }
+
+  /* Focus visible ring */
+  :focus-visible {
+    outline: 2px solid theme('colors.sage.400');
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Sticky page section that bleeds full-width out of padded container */
+  .sticky-section {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  @screen sm {
+    .sticky-section {
+      margin-left: -1.5rem;
+      margin-right: -1.5rem;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  .sticky-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  @screen sm {
+    .sticky-footer {
+      margin-left: -1.5rem;
+      margin-right: -1.5rem;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
   }
 }
 
 @layer utilities {
   .safe-area-inset-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  /* Hide scrollbar but keep scroll functionality */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .line-clamp-2 {
@@ -62,5 +126,12 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  /* Glass blur for sticky bars */
+  .glass {
+    background-color: rgba(247, 237, 228, 0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 }

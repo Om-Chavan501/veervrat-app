@@ -4,14 +4,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Earthy, calm palette aligned with Veervrat's philosophy
         sage: {
           50: '#f4f7f0',
           100: '#e6eed9',
           200: '#cdddb4',
           300: '#adc785',
           400: '#8baf5a',
-          500: '#6b8e4e',  // primary
+          500: '#6b8e4e',
           600: '#547240',
           700: '#425934',
           800: '#36482b',
@@ -23,7 +22,7 @@ export default {
           200: '#f5c9a7',
           300: '#eda572',
           400: '#e47d44',
-          500: '#c47b5c',  // accent
+          500: '#c47b5c',
           600: '#b05a3f',
           700: '#924535',
           800: '#773a2f',
@@ -31,7 +30,7 @@ export default {
         },
         warm: {
           50: '#fdfaf6',
-          100: '#f7ede4',  // background
+          100: '#f7ede4',
           200: '#eeddc8',
           300: '#e0c5a0',
           400: '#cda878',
@@ -58,10 +57,18 @@ export default {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         serif: ['Georgia', 'Cambria', 'serif'],
       },
+      boxShadow: {
+        'card': '0 1px 3px 0 rgba(0,0,0,0.06), 0 1px 2px -1px rgba(0,0,0,0.04)',
+        'card-hover': '0 4px 12px 0 rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04)',
+        'sticky': '0 2px 8px 0 rgba(0,0,0,0.06)',
+      },
       animation: {
-        'fade-in': 'fadeIn 0.3s ease-in-out',
-        'slide-up': 'slideUp 0.3s ease-out',
+        'fade-in': 'fadeIn 0.25s ease-out',
+        'slide-up': 'slideUp 0.25s ease-out',
+        'slide-down': 'slideDown 0.25s ease-out',
         'spin-slow': 'spin 2s linear infinite',
+        'progress': 'progressFill 0.6s ease-out',
+        'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -69,8 +76,19 @@ export default {
           '100%': { opacity: '1' },
         },
         slideUp: {
-          '0%': { transform: 'translateY(10px)', opacity: '0' },
+          '0%': { transform: 'translateY(8px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        slideDown: {
+          '0%': { transform: 'translateY(-8px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        progressFill: {
+          '0%': { width: '0%' },
+        },
+        pulseSoft: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.6' },
         },
       },
     },
