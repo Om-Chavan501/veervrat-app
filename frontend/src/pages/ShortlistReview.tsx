@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Zap } from 'lucide-react'
 import { shortlistsApi } from '../api/shortlists'
@@ -21,6 +21,7 @@ const categoryColors: Record<LacunaCategory, 'danger' | 'warning' | 'info'> = {
 export function ShortlistReview() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const { data: session, isLoading } = useQuery({
     queryKey: ['shortlist', id],
@@ -31,6 +32,7 @@ export function ShortlistReview() {
   const startAssessmentMutation = useMutation({
     mutationFn: (lacuna_id: string) => assessmentsApi.start(lacuna_id, id),
     onSuccess: (assessment) => {
+      queryClient.setQueryData(['assessment', assessment.id], assessment)
       navigate(`/assessments/${assessment.id}`)
     },
     onError: (e) => toast.error(getErrorMessage(e)),

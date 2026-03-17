@@ -47,20 +47,6 @@ class LacunaCategory(str, enum.Enum):
     C = "C"
 
 
-class GovernanceStatus(str, enum.Enum):
-    PROPOSED = "PROPOSED"
-    APPROVED = "APPROVED"
-    REJECTED = "REJECTED"
-
-
-class ChallengeStatus(str, enum.Enum):
-    APPLIED = "APPLIED"
-    APPROVED = "APPROVED"
-    ACTIVE = "ACTIVE"
-    COMPLETED = "COMPLETED"
-    CANCELLED = "CANCELLED"
-
-
 class VratmitraStatus(str, enum.Enum):
     PENDING = "PENDING"
     ACTIVE = "ACTIVE"
@@ -168,9 +154,6 @@ class Sentence(Base):
     assessment_responses = relationship("AssessmentResponse", back_populates="sentence")
     suggested_snapshots = relationship("SuggestedSentenceSnapshot", back_populates="sentence")
     journeys = relationship("SentenceJourney", back_populates="sentence")
-    community_exposures = relationship("CommunityExposure", back_populates="sentence")
-    community_resolutions = relationship("CommunityResolution", back_populates="sentence")
-    community_challenges = relationship("CommunityChallenge", back_populates="sentence")
 
 
 # ─────────────────────────────────────────
@@ -278,7 +261,6 @@ class SentenceJourney(Base):
     resolutions = relationship("ResolutionInstance", back_populates="journey")
     reflections = relationship("DailyReflection", back_populates="journey")
     exposures = relationship("ExposureInstance", back_populates="journey")
-    challenges = relationship("ChallengeInstance", back_populates="journey")
     vratmitras = relationship("JourneyVratmitra", back_populates="journey")
 
     __table_args__ = (UniqueConstraint("user_id", "sentence_id"),)
@@ -340,31 +322,6 @@ class ExposureInstance(Base):
     journey = relationship("SentenceJourney", back_populates="exposures")
 
 
-class CommunityExposure(Base):
-    __tablename__ = "community_exposures"
-
-    id = Column(String, primary_key=True, default=gen_uuid)
-    sentence_id = Column(String, ForeignKey("sentences.id"), nullable=False)
-    description = Column(Text, nullable=False)
-    governance = Column(SAEnum(GovernanceStatus), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    sentence = relationship("Sentence", back_populates="community_exposures")
-    exposure_recommendations = relationship("ExposureRecommendation", back_populates="exposure")
-
-
-class ExposureRecommendation(Base):
-    __tablename__ = "exposure_recommendations"
-
-    id = Column(String, primary_key=True, default=gen_uuid)
-    exposure_id = Column(String, ForeignKey("community_exposures.id"), nullable=False)
-    journey_id = Column(String, nullable=False)
-    recommended_by = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    exposure = relationship("CommunityExposure", back_populates="exposure_recommendations")
-
-
 # ─────────────────────────────────────────
 # RESOLUTIONS
 # ─────────────────────────────────────────
@@ -379,62 +336,6 @@ class ResolutionInstance(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     journey = relationship("SentenceJourney", back_populates="resolutions")
-
-
-class CommunityResolution(Base):
-    __tablename__ = "community_resolutions"
-
-    id = Column(String, primary_key=True, default=gen_uuid)
-    sentence_id = Column(String, ForeignKey("sentences.id"), nullable=False)
-    text = Column(Text, nullable=False)
-    governance = Column(SAEnum(GovernanceStatus), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    sentence = relationship("Sentence", back_populates="community_resolutions")
-    resolution_recommendations = relationship("ResolutionRecommendation", back_populates="resolution")
-
-
-class ResolutionRecommendation(Base):
-    __tablename__ = "resolution_recommendations"
-
-    id = Column(String, primary_key=True, default=gen_uuid)
-    resolution_id = Column(String, ForeignKey("community_resolutions.id"), nullable=False)
-    journey_id = Column(String, nullable=False)
-    recommended_by = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    resolution = relationship("CommunityResolution", back_populates="resolution_recommendations")
-
-
-# ─────────────────────────────────────────
-# CHALLENGES
-# ─────────────────────────────────────────
-
-class ChallengeInstance(Base):
-    __tablename__ = "challenge_instances"
-
-    id = Column(String, primary_key=True, default=gen_uuid)
-    journey_id = Column(String, ForeignKey("sentence_journeys.id"), nullable=False)
-    status = Column(SAEnum(ChallengeStatus), nullable=False)
-    application_note = Column(Text, nullable=True)
-    approval_note = Column(Text, nullable=True)
-    started_at = Column(DateTime, nullable=True)
-    completed_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    journey = relationship("SentenceJourney", back_populates="challenges")
-
-
-class CommunityChallenge(Base):
-    __tablename__ = "community_challenges"
-
-    id = Column(String, primary_key=True, default=gen_uuid)
-    sentence_id = Column(String, ForeignKey("sentences.id"), nullable=False)
-    description = Column(Text, nullable=False)
-    governance = Column(SAEnum(GovernanceStatus), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    sentence = relationship("Sentence", back_populates="community_challenges")
 
 
 # ─────────────────────────────────────────

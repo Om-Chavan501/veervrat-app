@@ -3,7 +3,10 @@ from sqlalchemy.orm import Session, joinedload
 from typing import List
 from ..database import get_db
 from ..models.models import User, LacunaShortlistSession, LacunaShortlistItem, Lacuna
-from ..schemas.schemas import ShortlistSessionOut, ShortlistSessionCreate, AddToShortlistRequest
+from ..schemas.schemas import (
+    ShortlistSessionOut, ShortlistSessionCreate, AddToShortlistRequest,
+    BatchUpdateShortlistRequest
+)
 from ..auth.dependencies import get_current_user
 import uuid
 
@@ -39,7 +42,11 @@ def create_session(
 
 
 @router.get("/{session_id}", response_model=ShortlistSessionOut)
-def get_session(session_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_session(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     session = (
         db.query(LacunaShortlistSession)
         .options(joinedload(LacunaShortlistSession.items).joinedload(LacunaShortlistItem.lacuna))
@@ -51,6 +58,39 @@ def get_session(session_id: str, db: Session = Depends(get_db), current_user: Us
     if session.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Unauthorized")
     return session
+
+
+@router.patch("/{session_id}/items", response_model=ShortlistSessionOut)
+def batch_update_items(
+    session_id: str,
+    req: BatchUpdateShortlistRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Replace the shortlist with exactly the provided ordered list of lacuna IDs."""
+    session = db.query(LacunaShortlistSession).filter(LacunaShortlistSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    # Delete all existing items
+    db.query(LacunaShortlistItem).filter(
+        LacunaShortlistItem.session_id == session_id
+    ).delete()
+
+    # Re-create from the provided ordered list
+    for rank, lacuna_id in enumerate(req.lacuna_ids, start=1):
+        item = LacunaShortlistItem(
+            id=str(uuid.uuid4()),
+            session_id=session_id,
+            lacuna_id=lacuna_id,
+            rank=rank,
+        )
+        db.add(item)
+
+    db.commit()
+    return get_session(session_id, db, current_user)
 
 
 @router.post("/{session_id}/items", response_model=ShortlistSessionOut)
@@ -66,7 +106,6 @@ def add_item(
     if session.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Unauthorized")
 
-    # Check if already exists
     existing = db.query(LacunaShortlistItem).filter(
         LacunaShortlistItem.session_id == session_id,
         LacunaShortlistItem.lacuna_id == req.lacuna_id,
@@ -74,7 +113,6 @@ def add_item(
     if existing:
         raise HTTPException(status_code=400, detail="Lacuna already in shortlist")
 
-    # Get max rank
     max_item = (
         db.query(LacunaShortlistItem)
         .filter(LacunaShortlistItem.session_id == session_id)

@@ -1,9 +1,13 @@
 import { api } from './client'
-import type { Journey, JourneyDetail, Resolution, ClarificationLink, IrrationalBelief, JourneyState } from '../types'
+import type { Journey, JourneyDetail, JourneyCounts, Resolution, ClarificationLink, IrrationalBelief, JourneyState } from '../types'
 
 export const journeysApi = {
-  list: (state?: JourneyState) =>
-    api.get<Journey[]>('/journeys', { params: state ? { state } : {} }).then((r) => r.data),
+  list: (state?: JourneyState, skip = 0, limit = 50) =>
+    api
+      .get<Journey[]>('/journeys', { params: { ...(state ? { state } : {}), skip, limit } })
+      .then((r) => r.data),
+
+  counts: () => api.get<JourneyCounts>('/journeys/counts').then((r) => r.data),
 
   create: (sentence_id: string, assessment_id: string) =>
     api.post<JourneyDetail>('/journeys', { sentence_id, assessment_id }).then((r) => r.data),

@@ -6,8 +6,13 @@ from .routers import auth, users, ontology, assessments, shortlists, journeys, r
 
 settings = get_settings()
 
-# Create all tables (use Alembic in production)
-Base.metadata.create_all(bind=engine)
+# ── Startup validation ──────────────────────────────────────────────────────
+assert settings.SECRET_KEY, "SECRET_KEY must be set in environment"
+assert len(settings.SECRET_KEY) >= 32, "SECRET_KEY must be at least 32 characters"
+
+# ── Table creation (dev/CI only — use Alembic in production) ────────────────
+if settings.CREATE_TABLES_ON_STARTUP:
+    Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Veervrat API",
@@ -21,7 +26,8 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, "http://localhost:5173", "http://localhost:3000"],
+    allow_origins=[settings.FRONTEND_URL, "http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
+    allow_origin_regex=r"https://.*\.ngrok-free\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

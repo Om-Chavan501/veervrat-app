@@ -1,41 +1,38 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { CheckCircle2, ArrowRight, AlertCircle, ChevronDown } from 'lucide-react'
+import { CheckCircle2, ArrowRight, AlertCircle, ChevronDown, AlertTriangle } from 'lucide-react'
 import { useState } from 'react'
 import { assessmentsApi } from '../api/assessments'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
+import { Modal } from '../components/ui/Modal'
 import { PageLoader } from '../components/ui/LoadingSpinner'
 import { getErrorMessage } from '../api/client'
 import type { Rating, Sentence } from '../types'
 
-const RATINGS: { value: Rating; label: string; short: string; color: string; activeColor: string }[] = [
+const RATINGS: { value: Rating; label: string; color: string; activeColor: string }[] = [
   {
     value: 'ALWAYS',
     label: 'Always',
-    short: 'A',
     color: 'border-red-200 text-red-600 hover:bg-red-50',
     activeColor: 'bg-red-100 border-red-400 text-red-700 ring-2 ring-red-200',
   },
   {
     value: 'OFTEN',
     label: 'Often',
-    short: 'O',
     color: 'border-amber-200 text-amber-600 hover:bg-amber-50',
     activeColor: 'bg-amber-100 border-amber-400 text-amber-700 ring-2 ring-amber-200',
   },
   {
     value: 'RARELY',
     label: 'Rarely',
-    short: 'R',
     color: 'border-blue-200 text-blue-600 hover:bg-blue-50',
     activeColor: 'bg-blue-100 border-blue-400 text-blue-700 ring-2 ring-blue-200',
   },
   {
     value: 'NEVER',
     label: 'Never',
-    short: 'N',
     color: 'border-sage-200 text-sage-600 hover:bg-sage-50',
     activeColor: 'bg-sage-100 border-sage-400 text-sage-700 ring-2 ring-sage-200',
   },
@@ -76,7 +73,6 @@ function SentenceRow({
           )}
         </div>
 
-        {/* Rating buttons */}
         <div className="flex gap-2 mt-3 ml-9">
           {RATINGS.map(({ value, label, color, activeColor }) => (
             <button
@@ -122,7 +118,6 @@ function SubVirtueSection({
 
   return (
     <div className="rounded-2xl border border-warm-200 bg-white overflow-hidden shadow-card">
-      {/* Section header */}
       <button
         onClick={() => setCollapsed((c) => !c)}
         className="w-full flex items-center justify-between p-4 text-left hover:bg-warm-50 transition-colors"
@@ -164,7 +159,6 @@ function SubVirtueSection({
         </div>
       </button>
 
-      {/* Progress bar strip */}
       <div className="h-0.5 bg-warm-100 mx-4">
         <div
           className="h-full bg-sage-400 transition-all duration-500 rounded-full"
@@ -172,7 +166,6 @@ function SubVirtueSection({
         />
       </div>
 
-      {/* Sentences */}
       {!collapsed && (
         <div className="p-4 pt-3 space-y-3 animate-fade-in">
           {sentences.map((sentence, idx) => (
@@ -195,6 +188,7 @@ export function Assessment() {
   const { assessmentId } = useParams<{ assessmentId: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false)
 
   const { data: assessment, isLoading } = useQuery({
     queryKey: ['assessment', assessmentId],
@@ -223,6 +217,7 @@ export function Assessment() {
   const completeMutation = useMutation({
     mutationFn: () => assessmentsApi.complete(assessmentId!),
     onSuccess: () => {
+      setShowCompleteConfirm(false)
       toast.success('Assessment complete!')
       navigate(`/assessment-results/${assessmentId}`)
     },
@@ -261,7 +256,6 @@ export function Assessment() {
           </span>
         </div>
 
-        {/* Progress bar */}
         <div className="h-1.5 bg-warm-200 rounded-full overflow-hidden">
           <div
             className="h-full bg-sage-500 rounded-full transition-all duration-500 ease-out"
@@ -276,7 +270,7 @@ export function Assessment() {
         </p>
       </div>
 
-      {/* ── Page title (non-sticky) ── */}
+      {/* ── Page title ── */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-stone-800">
           {assessment.lacuna?.name_en} Assessment
@@ -316,7 +310,7 @@ export function Assessment() {
         })}
       </div>
 
-      {/* spacer so content doesn't hide behind fixed footer */}
+      {/* spacer for fixed footer */}
       <div className="h-20 lg:h-16" />
 
       {/* ── Fixed docked complete footer ── */}
@@ -342,8 +336,7 @@ export function Assessment() {
               )}
             </div>
             <Button
-              onClick={() => completeMutation.mutate()}
-              loading={completeMutation.isPending}
+              onClick={() => setShowCompleteConfirm(true)}
               disabled={!canComplete}
               className={canComplete ? 'bg-white text-sage-700 hover:bg-sage-50 border-0 shadow-sm flex-shrink-0' : 'flex-shrink-0'}
             >
@@ -352,6 +345,47 @@ export function Assessment() {
           </div>
         </div>
       </div>
+
+      {/* ── Complete confirmation modal ── */}
+      <Modal
+        open={showCompleteConfirm}
+        onClose={() => setShowCompleteConfirm(false)}
+        title="Complete assessment?"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
+            <AlertTriangle size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-amber-800">
+              <p className="font-semibold mb-0.5">
+                {progress < 100
+                  ? `${totalSentences - answeredCount} sentences still unrated`
+                  : 'All sentences rated'}
+              </p>
+              <p className="text-xs text-amber-700">
+                Once completed, you cannot add or change ratings. Suggestions will be generated from your responses.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => setShowCompleteConfirm(false)}
+            >
+              Keep going
+            </Button>
+            <Button
+              variant="primary"
+              className="flex-1"
+              loading={completeMutation.isPending}
+              onClick={() => completeMutation.mutate()}
+            >
+              Complete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

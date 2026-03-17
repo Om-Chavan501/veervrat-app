@@ -13,7 +13,7 @@ export function Assessments() {
 
   const { data: assessments, isLoading } = useQuery({
     queryKey: ['assessments'],
-    queryFn: assessmentsApi.list,
+    queryFn: () => assessmentsApi.list(),
   })
 
   if (isLoading) return <PageLoader />

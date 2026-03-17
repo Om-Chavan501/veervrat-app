@@ -141,6 +141,8 @@ export function JourneyDetail() {
   const [editingReflection, setEditingReflection] = useState<Reflection | undefined>()
   const [editingExposure, setEditingExposure] = useState<Exposure | undefined>()
   const [editingResolution, setEditingResolution] = useState<Resolution | undefined>()
+  const [pauseModal, setPauseModal] = useState(false)
+  const [pauseReason, setPauseReason] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
   const [exposureForm, setExposureForm] = useState({ description: '', context_note: '' })
   const [resolutionForm, setResolutionForm] = useState({ text: '', frequency: '' })
@@ -170,8 +172,13 @@ export function JourneyDetail() {
   })
 
   const pauseMutation = useMutation({
-    mutationFn: () => journeysApi.pause(journeyId!),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['journey', journeyId] }); toast.success('Journey paused') },
+    mutationFn: (reason?: string) => journeysApi.pause(journeyId!, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['journey', journeyId] })
+      setPauseModal(false)
+      setPauseReason('')
+      toast.success('Journey paused')
+    },
     onError: (e) => toast.error(getErrorMessage(e)),
   })
   const resumeMutation = useMutation({
@@ -300,7 +307,7 @@ export function JourneyDetail() {
             )}
             {isActive && (
               <>
-                <Button size="sm" variant="secondary" onClick={() => pauseMutation.mutate()} loading={pauseMutation.isPending}>
+                <Button size="sm" variant="secondary" onClick={() => { setPauseReason(journey.inactive_reason ?? ''); setPauseModal(true) }}>
                   <Pause size={13} /> Pause
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => completeMutation.mutate()} loading={completeMutation.isPending}>
@@ -659,6 +666,33 @@ export function JourneyDetail() {
             {editingResolution ? 'Update' : 'Add resolution'}
           </Button>
         </form>
+      </Modal>
+
+      <Modal open={pauseModal} onClose={() => { setPauseModal(false); setPauseReason('') }} title="Pause journey" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-stone-600">
+            Why are you pausing this journey? (optional — helps you remember when you resume)
+          </p>
+          <Textarea
+            value={pauseReason}
+            onChange={(e) => setPauseReason(e.target.value)}
+            placeholder="e.g. Taking a break, too busy right now, revisiting later..."
+            rows={3}
+          />
+          <div className="flex gap-3">
+            <Button variant="secondary" className="flex-1" onClick={() => { setPauseModal(false); setPauseReason('') }}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              className="flex-1"
+              loading={pauseMutation.isPending}
+              onClick={() => pauseMutation.mutate(pauseReason.trim() || undefined)}
+            >
+              <Pause size={13} /> Pause journey
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       <Modal open={inviteModal} onClose={() => { setInviteModal(false); setInviteEmail('') }} title="Invite Vratmitra" description="Invite someone to be your accountability mentor">

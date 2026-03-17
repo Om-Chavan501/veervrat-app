@@ -9,6 +9,12 @@ export const shortlistsApi = {
 
   get: (id: string) => api.get<ShortlistSession>(`/shortlists/${id}`).then((r) => r.data),
 
+  /** Replace all shortlist items with the provided ordered lacuna IDs (debounced batch update). */
+  batchUpdate: (sessionId: string, lacunaIds: string[]) =>
+    api
+      .patch<ShortlistSession>(`/shortlists/${sessionId}/items`, { lacuna_ids: lacunaIds })
+      .then((r) => r.data),
+
   addItem: (sessionId: string, lacuna_id: string) =>
     api.post<ShortlistSession>(`/shortlists/${sessionId}/items`, { lacuna_id }).then((r) => r.data),
 

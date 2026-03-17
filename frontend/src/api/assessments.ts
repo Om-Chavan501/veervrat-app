@@ -1,11 +1,13 @@
 import { api } from './client'
-import type { Assessment, AssessmentDetail, SuggestedSnapshot, Rating } from '../types'
+import type { AssessmentDetail, SuggestedSnapshot, Rating } from '../types'
 
 export const assessmentsApi = {
-  list: () => api.get<Assessment[]>('/assessments').then((r) => r.data),
+  list: (skip = 0, limit = 50) =>
+    api.get<AssessmentDetail[]>('/assessments', { params: { skip, limit } }).then((r) => r.data),
 
+  /** Returns full AssessmentDetail — eliminates second round-trip on the Assessment page. */
   start: (lacuna_id: string, shortlist_session_id?: string) =>
-    api.post<Assessment>('/assessments/start', { lacuna_id, shortlist_session_id }).then((r) => r.data),
+    api.post<AssessmentDetail>('/assessments/start', { lacuna_id, shortlist_session_id }).then((r) => r.data),
 
   get: (id: string) => api.get<AssessmentDetail>(`/assessments/${id}`).then((r) => r.data),
 

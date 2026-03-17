@@ -1,9 +1,9 @@
 from pydantic import BaseModel, EmailStr, field_validator
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime
 from ..models.models import (
     JourneyState, AssessmentStatus, Rating, IrrationalBelief,
-    LacunaCategory, GovernanceStatus, ChallengeStatus, VratmitraStatus
+    LacunaCategory, VratmitraStatus
 )
 
 
@@ -72,8 +72,8 @@ class VirtueOut(BaseModel):
         from_attributes = True
 
 
-class SentenceSlimOut(BaseModel):
-    """Sentence without back-reference to sub_virtue (avoids recursion)."""
+class SentenceOut(BaseModel):
+    """Sentence without sub_virtue back-reference — safe to nest inside SubVirtueOut."""
     id: str
     text_en: str
     text_mr: str
@@ -89,13 +89,14 @@ class SubVirtueOut(BaseModel):
     name_mr: str
     virtue_id: str
     virtue: Optional[VirtueOut] = None
-    sentences: List[SentenceSlimOut] = []
+    sentences: List[SentenceOut] = []
 
     class Config:
         from_attributes = True
 
 
-class SentenceOut(BaseModel):
+class SentenceDetailOut(BaseModel):
+    """Sentence with full sub_virtue context — for standalone use (journeys, suggestions, responses)."""
     id: str
     text_en: str
     text_mr: str
@@ -172,6 +173,11 @@ class AddToShortlistRequest(BaseModel):
     lacuna_id: str
 
 
+class BatchUpdateShortlistRequest(BaseModel):
+    """Replace shortlist items with exactly this ordered list of lacuna IDs."""
+    lacuna_ids: List[str]
+
+
 # ─────────────────────────────────────────
 # ASSESSMENTS
 # ─────────────────────────────────────────
@@ -182,7 +188,7 @@ class AssessmentResponseOut(BaseModel):
     sentence_id: str
     rating: Rating
     answered_at: datetime
-    sentence: Optional[SentenceOut] = None
+    sentence: Optional[SentenceDetailOut] = None
 
     class Config:
         from_attributes = True
@@ -194,7 +200,7 @@ class SuggestedSnapshotOut(BaseModel):
     sentence_id: str
     priority_rank: int
     reason: str
-    sentence: Optional[SentenceOut] = None
+    sentence: Optional[SentenceDetailOut] = None
 
     class Config:
         from_attributes = True
@@ -279,7 +285,7 @@ class JourneyOut(BaseModel):
     created_at: datetime
     inactive_at: Optional[datetime] = None
     inactive_reason: Optional[str] = None
-    sentence: Optional[SentenceOut] = None
+    sentence: Optional[SentenceDetailOut] = None
 
     class Config:
         from_attributes = True
@@ -293,12 +299,18 @@ class JourneyDetailOut(BaseModel):
     created_at: datetime
     inactive_at: Optional[datetime] = None
     inactive_reason: Optional[str] = None
-    sentence: Optional[SentenceOut] = None
+    sentence: Optional[SentenceDetailOut] = None
     links: List[ClarificationLinkOut] = []
     resolutions: List[ResolutionOut] = []
 
     class Config:
         from_attributes = True
+
+
+class JourneyCountsOut(BaseModel):
+    ACTIVE: int = 0
+    INACTIVE: int = 0
+    COMPLETED: int = 0
 
 
 class CreateJourneyRequest(BaseModel):

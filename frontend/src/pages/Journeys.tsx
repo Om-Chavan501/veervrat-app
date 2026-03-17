@@ -30,12 +30,14 @@ export function Journeys() {
     queryFn: () => journeysApi.list(filter === 'ALL' ? undefined : filter),
   })
 
+  const { data: counts } = useQuery({
+    queryKey: ['journey-counts'],
+    queryFn: journeysApi.counts,
+  })
+
   if (isLoading) return <PageLoader />
 
-  const counts = journeys?.reduce((acc, j) => {
-    acc[j.state] = (acc[j.state] ?? 0) + 1
-    return acc
-  }, {} as Record<string, number>) ?? {}
+  const total = (counts?.ACTIVE ?? 0) + (counts?.INACTIVE ?? 0) + (counts?.COMPLETED ?? 0)
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -43,14 +45,14 @@ export function Journeys() {
       <div>
         <h1 className="text-2xl font-bold text-stone-800">My Journeys</h1>
         <p className="text-stone-500 mt-1 text-sm">
-          {journeys?.length ?? 0} journey{(journeys?.length ?? 0) !== 1 ? 's' : ''} across all states
+          {total} journey{total !== 1 ? 's' : ''} across all states
         </p>
       </div>
 
       {/* Filter pills */}
       <div className="flex gap-2 flex-wrap">
         {FILTERS.map(({ value, label }) => {
-          const count = value === 'ALL' ? (journeys?.length ?? 0) : (counts[value] ?? 0)
+          const count = value === 'ALL' ? total : (counts?.[value] ?? 0)
           return (
             <button
               key={value}

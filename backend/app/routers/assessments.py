@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from typing import List
 from ..database import get_db
@@ -17,19 +17,30 @@ router = APIRouter(prefix="/assessments", tags=["assessments"])
 
 
 @router.get("", response_model=List[AssessmentOut])
-def list_assessments(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_assessments(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     return (
         db.query(LacunaAssessment)
         .options(joinedload(LacunaAssessment.lacuna))
         .filter(LacunaAssessment.user_id == current_user.id)
         .order_by(LacunaAssessment.started_at.desc())
+        .offset(skip)
+        .limit(limit)
         .all()
     )
 
 
-@router.post("/start", response_model=AssessmentOut)
-def start_assessment(req: StartAssessmentRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Check for existing IN_PROGRESS assessment
+@router.post("/start", response_model=AssessmentDetailOut)
+def start_assessment(
+    req: StartAssessmentRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Return existing IN_PROGRESS assessment if one exists
     existing = db.query(LacunaAssessment).filter(
         LacunaAssessment.user_id == current_user.id,
         LacunaAssessment.lacuna_id == req.lacuna_id,
@@ -37,7 +48,7 @@ def start_assessment(req: StartAssessmentRequest, db: Session = Depends(get_db),
     ).first()
 
     if existing:
-        return existing
+        return get_assessment(existing.id, db, current_user)
 
     assessment = LacunaAssessment(
         id=str(uuid.uuid4()),
@@ -49,18 +60,26 @@ def start_assessment(req: StartAssessmentRequest, db: Session = Depends(get_db),
     db.add(assessment)
     db.commit()
     db.refresh(assessment)
-    return assessment
+    return get_assessment(assessment.id, db, current_user)
 
 
 @router.get("/{assessment_id}", response_model=AssessmentDetailOut)
-def get_assessment(assessment_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_assessment(
+    assessment_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     assessment = (
         db.query(LacunaAssessment)
         .options(
             joinedload(LacunaAssessment.lacuna).joinedload(Lacuna.lacuna_sub_virtues)
             .joinedload(LacunaSubVirtue.sub_virtue).joinedload(SubVirtue.sentences),
-            joinedload(LacunaAssessment.responses).joinedload(AssessmentResponse.sentence),
-            joinedload(LacunaAssessment.suggestions).joinedload(SuggestedSentenceSnapshot.sentence),
+            joinedload(LacunaAssessment.lacuna).joinedload(Lacuna.lacuna_sub_virtues)
+            .joinedload(LacunaSubVirtue.sub_virtue).joinedload(SubVirtue.virtue),
+            joinedload(LacunaAssessment.responses).joinedload(AssessmentResponse.sentence)
+            .joinedload(Sentence.sub_virtue).joinedload(SubVirtue.virtue),
+            joinedload(LacunaAssessment.suggestions).joinedload(SuggestedSentenceSnapshot.sentence)
+            .joinedload(Sentence.sub_virtue).joinedload(SubVirtue.virtue),
         )
         .filter(LacunaAssessment.id == assessment_id)
         .first()
@@ -155,10 +174,8 @@ def complete_assessment(
     assessment.completed_at = datetime.utcnow()
     db.commit()
 
-    # Generate suggestions
     _generate_suggestions(db, assessment_id, assessment.lacuna_id)
 
-    db.refresh(assessment)
     return get_assessment(assessment_id, db, current_user)
 
 
@@ -188,7 +205,6 @@ def get_suggestions(
 
 
 def _generate_suggestions(db: Session, assessment_id: str, lacuna_id: str):
-    # Get low-rated responses (RARELY or NEVER)
     low_responses = (
         db.query(AssessmentResponse)
         .options(joinedload(AssessmentResponse.sentence).joinedload(Sentence.sub_virtue))
@@ -199,17 +215,14 @@ def _generate_suggestions(db: Session, assessment_id: str, lacuna_id: str):
         .all()
     )
 
-    # Get lacuna subvirtue priorities
     lsv_list = db.query(LacunaSubVirtue).filter(LacunaSubVirtue.lacuna_id == lacuna_id).all()
     priority_map = {lsv.sub_virtue_id: lsv.priority for lsv in lsv_list}
 
-    # Sort by priority
     sorted_responses = sorted(
         low_responses,
         key=lambda r: priority_map.get(r.sentence.sub_virtue_id, 999),
     )
 
-    # Delete old suggestions (idempotent)
     db.query(SuggestedSentenceSnapshot).filter(
         SuggestedSentenceSnapshot.assessment_id == assessment_id
     ).delete()

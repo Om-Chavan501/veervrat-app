@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from typing import List, Optional
 from datetime import datetime
 from ..database import get_db
@@ -8,7 +9,7 @@ from ..models.models import (
     LacunaAssessment, Sentence, JourneyState, SubVirtue, Virtue
 )
 from ..schemas.schemas import (
-    JourneyOut, JourneyDetailOut, CreateJourneyRequest,
+    JourneyOut, JourneyDetailOut, JourneyCountsOut, CreateJourneyRequest,
     SaveClarificationRequest, AddResolutionRequest, UpdateResolutionRequest,
     PauseJourneyRequest, ResolutionOut, ClarificationLinkOut
 )
@@ -18,9 +19,30 @@ import uuid
 router = APIRouter(prefix="/journeys", tags=["journeys"])
 
 
+@router.get("/counts", response_model=JourneyCountsOut)
+def journey_counts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    results = (
+        db.query(SentenceJourney.state, func.count(SentenceJourney.id))
+        .filter(SentenceJourney.user_id == current_user.id)
+        .group_by(SentenceJourney.state)
+        .all()
+    )
+    counts = {state.value: count for state, count in results}
+    return JourneyCountsOut(
+        ACTIVE=counts.get("ACTIVE", 0),
+        INACTIVE=counts.get("INACTIVE", 0),
+        COMPLETED=counts.get("COMPLETED", 0),
+    )
+
+
 @router.get("", response_model=List[JourneyOut])
 def list_journeys(
     state: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -35,7 +57,7 @@ def list_journeys(
     )
     if state:
         q = q.filter(SentenceJourney.state == state)
-    return q.order_by(SentenceJourney.created_at.desc()).all()
+    return q.order_by(SentenceJourney.created_at.desc()).offset(skip).limit(limit).all()
 
 
 @router.post("", response_model=JourneyDetailOut)
@@ -44,14 +66,12 @@ def create_or_link_journey(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Verify assessment
     assessment = db.query(LacunaAssessment).filter(LacunaAssessment.id == req.assessment_id).first()
     if not assessment:
         raise HTTPException(status_code=404, detail="Assessment not found")
     if assessment.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Unauthorized")
 
-    # Find or create journey
     journey = db.query(SentenceJourney).filter(
         SentenceJourney.user_id == current_user.id,
         SentenceJourney.sentence_id == req.sentence_id,
@@ -72,7 +92,11 @@ def create_or_link_journey(
 
 
 @router.get("/{journey_id}", response_model=JourneyDetailOut)
-def get_journey(journey_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_journey(
+    journey_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     return _get_journey_detail(journey_id, db, current_user)
 
 
@@ -128,7 +152,11 @@ def save_clarification(
 
 
 @router.get("/{journey_id}/clarifications", response_model=List[ClarificationLinkOut])
-def list_clarifications(journey_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_clarifications(
+    journey_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     journey = db.query(SentenceJourney).filter(SentenceJourney.id == journey_id).first()
     if not journey:
         raise HTTPException(status_code=404, detail="Journey not found")
@@ -159,7 +187,6 @@ def add_resolution(
     if journey.state != JourneyState.ACTIVE:
         raise HTTPException(status_code=400, detail="Cannot add resolutions to inactive journey")
 
-    # Must have at least one clarification
     link_count = db.query(SentenceJourneyAssessmentLink).filter(
         SentenceJourneyAssessmentLink.journey_id == journey_id
     ).count()

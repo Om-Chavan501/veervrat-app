@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -33,6 +33,7 @@ export function Lacunae() {
   const [selectedCategory, setSelectedCategory] = useState<LacunaCategory | 'all'>('all')
   const [shortlistId, setShortlistId] = useState<string | null>(null)
   const [shortlisted, setShortlisted] = useState<Set<string>>(new Set())
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: lacunae, isLoading } = useQuery({
     queryKey: ['lacunae'],
@@ -54,33 +55,27 @@ export function Lacunae() {
     onError: (e) => toast.error(getErrorMessage(e)),
   })
 
-  const addItemMutation = useMutation({
-    mutationFn: ({ sid, lid }: { sid: string; lid: string }) =>
-      shortlistsApi.addItem(sid, lid),
-    onSuccess: (_, vars) => {
-      setShortlisted((prev) => new Set([...prev, vars.lid]))
-    },
-  })
-
-  const removeItemMutation = useMutation({
-    mutationFn: ({ sid, lid }: { sid: string; lid: string }) =>
-      shortlistsApi.removeItem(sid, lid),
-    onSuccess: (_, vars) => {
-      setShortlisted((prev) => {
-        const next = new Set(prev)
-        next.delete(vars.lid)
-        return next
-      })
-    },
+  const batchUpdateMutation = useMutation({
+    mutationFn: ({ sid, lacunaIds }: { sid: string; lacunaIds: string[] }) =>
+      shortlistsApi.batchUpdate(sid, lacunaIds),
+    onError: (e) => toast.error(getErrorMessage(e)),
   })
 
   const startAssessmentMutation = useMutation({
     mutationFn: (lacuna_id: string) => assessmentsApi.start(lacuna_id, shortlistId ?? undefined),
     onSuccess: (assessment) => {
+      queryClient.setQueryData(['assessment', assessment.id], assessment)
       navigate(`/assessments/${assessment.id}`)
     },
     onError: (e) => toast.error(getErrorMessage(e)),
   })
+
+  const debouncedSync = useCallback((sid: string, ids: string[]) => {
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current)
+    syncTimerRef.current = setTimeout(() => {
+      batchUpdateMutation.mutate({ sid, lacunaIds: ids })
+    }, 600)
+  }, [batchUpdateMutation])
 
   if (isLoading) return <PageLoader />
 
@@ -107,11 +102,14 @@ export function Lacunae() {
       toast.error('Start a shortlist session first')
       return
     }
-    if (shortlisted.has(lacunaId)) {
-      removeItemMutation.mutate({ sid: shortlistId, lid: lacunaId })
+    const next = new Set(shortlisted)
+    if (next.has(lacunaId)) {
+      next.delete(lacunaId)
     } else {
-      addItemMutation.mutate({ sid: shortlistId, lid: lacunaId })
+      next.add(lacunaId)
     }
+    setShortlisted(next)
+    debouncedSync(shortlistId, Array.from(next))
   }
 
   return (

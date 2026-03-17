@@ -5,8 +5,6 @@ export type AssessmentStatus = 'IN_PROGRESS' | 'COMPLETED'
 export type Rating = 'ALWAYS' | 'OFTEN' | 'RARELY' | 'NEVER'
 export type IrrationalBelief = 'MUST_BE_LOVED' | 'MUST_BE_COMPETENT' | 'MUST_HAVE_COMFORT'
 export type LacunaCategory = 'A' | 'B' | 'C'
-export type GovernanceStatus = 'PROPOSED' | 'APPROVED' | 'REJECTED'
-export type ChallengeStatus = 'APPLIED' | 'APPROVED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED'
 export type VratmitraStatus = 'PENDING' | 'ACTIVE' | 'DETACHED'
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -42,11 +40,16 @@ export interface SubVirtue {
   sentences?: Sentence[]
 }
 
+/** Sentence without sub_virtue — safe when nested inside SubVirtue.sentences */
 export interface Sentence {
   id: string
   text_en: string
   text_mr: string
   sub_virtue_id: string
+}
+
+/** Sentence with full sub_virtue context — used in journeys, suggestions, assessment responses */
+export interface SentenceDetail extends Sentence {
   sub_virtue?: SubVirtue
 }
 
@@ -95,7 +98,7 @@ export interface AssessmentResponse {
   sentence_id: string
   rating: Rating
   answered_at: string
-  sentence?: Sentence
+  sentence?: SentenceDetail
 }
 
 export interface SuggestedSnapshot {
@@ -104,7 +107,7 @@ export interface SuggestedSnapshot {
   sentence_id: string
   priority_rank: number
   reason: string
-  sentence?: Sentence
+  sentence?: SentenceDetail
 }
 
 export interface Assessment {
@@ -155,12 +158,18 @@ export interface Journey {
   created_at: string
   inactive_at?: string
   inactive_reason?: string
-  sentence?: Sentence
+  sentence?: SentenceDetail
 }
 
 export interface JourneyDetail extends Journey {
   links: ClarificationLink[]
   resolutions: Resolution[]
+}
+
+export interface JourneyCounts {
+  ACTIVE: number
+  INACTIVE: number
+  COMPLETED: number
 }
 
 // ─── Reflection ───────────────────────────────────────────────────────────────
