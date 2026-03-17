@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Archive as ArchiveIcon, Route, ArrowRight, Play } from 'lucide-react'
 import { journeysApi } from '../api/journeys'
+import { useLanguage } from '../contexts/LanguageContext'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -13,6 +14,7 @@ import { formatDistanceToNow } from 'date-fns'
 
 export function Archive() {
   const qc = useQueryClient()
+  const { t, lang } = useLanguage()
 
   const { data: inactive, isLoading: inactiveLoading } = useQuery({
     queryKey: ['journeys', 'INACTIVE'],
@@ -28,7 +30,7 @@ export function Archive() {
     mutationFn: (id: string) => journeysApi.resume(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['journeys'] })
-      toast.success('Journey resumed!')
+      toast.success(t('archive.journeyResumed'))
     },
     onError: (e) => toast.error(getErrorMessage(e)),
   })
@@ -38,19 +40,14 @@ export function Archive() {
   return (
     <div className="space-y-8 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-stone-800">Archive</h1>
-        <p className="text-stone-500 mt-1 text-sm">
-          Your paused and completed journeys — preserved for reflection
-        </p>
+        <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">{t('archive.title')}</h1>
+        <p className="text-stone-500 dark:text-stone-400 mt-1 text-sm">{t('archive.subtitle')}</p>
       </div>
 
-      {/* Paused journeys */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-base font-semibold text-stone-800">Paused Journeys</h2>
-          {inactive && inactive.length > 0 && (
-            <Badge variant="warning">{inactive.length}</Badge>
-          )}
+          <h2 className="text-base font-semibold text-stone-800 dark:text-stone-100">{t('archive.pausedJourneys')}</h2>
+          {inactive && inactive.length > 0 && <Badge variant="warning">{inactive.length}</Badge>}
         </div>
 
         {inactive && inactive.length > 0 ? (
@@ -58,35 +55,28 @@ export function Archive() {
             {inactive.map((j) => (
               <Card key={j.id} padding="md">
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                    <Route size={18} className="text-amber-600" />
+                  <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                    <Route size={18} className="text-amber-600 dark:text-amber-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-stone-800 line-clamp-2">
-                      {j.sentence?.text_en}
+                    <p className="text-sm font-semibold text-stone-800 dark:text-stone-100 line-clamp-2">
+                      {lang === 'mr' ? j.sentence?.text_mr : j.sentence?.text_en}
                     </p>
-                    <p className="text-xs text-stone-400 mt-1">
-                      Paused {j.inactive_at
+                    <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
+                      {t('archive.pausedJourneys').split(' ')[0]} {j.inactive_at
                         ? formatDistanceToNow(new Date(j.inactive_at), { addSuffix: true })
-                        : 'some time ago'}
+                        : ''}
                     </p>
                     {j.inactive_reason && (
-                      <p className="text-xs text-stone-500 mt-1 italic">"{j.inactive_reason}"</p>
+                      <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 italic">"{j.inactive_reason}"</p>
                     )}
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => resumeMutation.mutate(j.id)}
-                      loading={resumeMutation.isPending}
-                    >
-                      <Play size={14} /> Resume
+                    <Button size="sm" variant="outline" onClick={() => resumeMutation.mutate(j.id)} loading={resumeMutation.isPending}>
+                      <Play size={14} /> {t('archive.resume')}
                     </Button>
                     <Link to={`/journeys/${j.id}`}>
-                      <Button size="sm" variant="ghost">
-                        <ArrowRight size={14} />
-                      </Button>
+                      <Button size="sm" variant="ghost"><ArrowRight size={14} /></Button>
                     </Link>
                   </div>
                 </div>
@@ -95,49 +85,36 @@ export function Archive() {
           </div>
         ) : (
           <Card>
-            <EmptyState
-              icon={ArchiveIcon}
-              title="No paused journeys"
-              description="Journeys you pause will appear here"
-            />
+            <EmptyState icon={ArchiveIcon} title={t('archive.noPaused')} description={t('archive.noPausedDesc')} />
           </Card>
         )}
       </div>
 
-      {/* Completed journeys */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-base font-semibold text-stone-800">Completed Journeys</h2>
-          {completed && completed.length > 0 && (
-            <Badge variant="info">{completed.length}</Badge>
-          )}
+          <h2 className="text-base font-semibold text-stone-800 dark:text-stone-100">{t('archive.completedJourneys')}</h2>
+          {completed && completed.length > 0 && <Badge variant="info">{completed.length}</Badge>}
         </div>
 
         {completed && completed.length > 0 ? (
           <div className="space-y-3">
             {completed.map((j) => (
               <Link key={j.id} to={`/journeys/${j.id}`}>
-                <Card
-                  padding="md"
-                  className="hover:border-sage-200 hover:shadow-sm transition-all cursor-pointer group"
-                >
+                <Card padding="md" className="hover:border-sage-200 hover:shadow-sm transition-all cursor-pointer group">
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-sage-100 flex items-center justify-center flex-shrink-0">
-                      <Route size={18} className="text-sage-500" />
+                    <div className="w-10 h-10 rounded-lg bg-sage-100 dark:bg-sage-900/40 flex items-center justify-center flex-shrink-0">
+                      <Route size={18} className="text-sage-500 dark:text-sage-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <Badge variant="info" className="mb-1.5">Completed</Badge>
-                      <p className="text-sm font-semibold text-stone-800 line-clamp-2">
-                        {j.sentence?.text_en}
+                      <Badge variant="info" className="mb-1.5">{t('archive.completed')}</Badge>
+                      <p className="text-sm font-semibold text-stone-800 dark:text-stone-100 line-clamp-2">
+                        {lang === 'mr' ? j.sentence?.text_mr : j.sentence?.text_en}
                       </p>
-                      <p className="text-xs text-stone-400 mt-1">
-                        Started {formatDistanceToNow(new Date(j.created_at), { addSuffix: true })}
+                      <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
+                        {formatDistanceToNow(new Date(j.created_at), { addSuffix: true })}
                       </p>
                     </div>
-                    <ArrowRight
-                      size={16}
-                      className="text-stone-300 group-hover:text-stone-500 transition-colors flex-shrink-0 mt-2"
-                    />
+                    <ArrowRight size={16} className="text-stone-300 group-hover:text-stone-500 transition-colors flex-shrink-0 mt-2" />
                   </div>
                 </Card>
               </Link>
@@ -145,11 +122,7 @@ export function Archive() {
           </div>
         ) : (
           <Card>
-            <EmptyState
-              icon={ArchiveIcon}
-              title="No completed journeys yet"
-              description="Complete a journey to see it here — a permanent record of your growth"
-            />
+            <EmptyState icon={ArchiveIcon} title={t('archive.noCompleted')} description={t('archive.noCompletedDesc')} />
           </Card>
         )}
       </div>

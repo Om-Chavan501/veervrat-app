@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { ArrowLeft, Zap } from 'lucide-react'
 import { shortlistsApi } from '../api/shortlists'
 import { assessmentsApi } from '../api/assessments'
+import { useLanguage } from '../contexts/LanguageContext'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -13,15 +14,14 @@ import { getErrorMessage } from '../api/client'
 import type { LacunaCategory } from '../types'
 
 const categoryColors: Record<LacunaCategory, 'danger' | 'warning' | 'info'> = {
-  A: 'danger',
-  B: 'warning',
-  C: 'info',
+  A: 'danger', B: 'warning', C: 'info',
 }
 
 export function ShortlistReview() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { t, lang } = useLanguage()
 
   const { data: session, isLoading } = useQuery({
     queryKey: ['shortlist', id],
@@ -39,7 +39,6 @@ export function ShortlistReview() {
   })
 
   if (isLoading) return <PageLoader />
-
   if (!session) return null
 
   return (
@@ -47,15 +46,14 @@ export function ShortlistReview() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate('/lacunae')}
-          className="p-2 rounded-lg hover:bg-warm-100 text-stone-500 transition-colors"
+          className="p-2 rounded-lg hover:bg-warm-100 dark:hover:bg-stone-800 text-stone-500 transition-colors"
         >
           <ArrowLeft size={18} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">Shortlist Review</h1>
-          <p className="text-stone-500 text-sm mt-0.5">
-            {session.items.length} lacun{session.items.length === 1 ? 'a' : 'ae'} selected ·{' '}
-            {new Date(session.created_at).toLocaleDateString()}
+          <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">{t('shortlist.title')}</h1>
+          <p className="text-stone-500 dark:text-stone-400 text-sm mt-0.5">
+            {t('shortlist.subtitle').replace('{count}', String(session.items.length))} · {new Date(session.created_at).toLocaleDateString()}
           </p>
         </div>
       </div>
@@ -63,9 +61,9 @@ export function ShortlistReview() {
       {session.items.length === 0 ? (
         <EmptyState
           icon={Zap}
-          title="No lacunae in this shortlist"
-          description="Go back to Lacunae and add some to this session"
-          action={<Button onClick={() => navigate('/lacunae')}>Browse Lacunae</Button>}
+          title={t('shortlist.empty')}
+          description={t('shortlist.emptyDesc')}
+          action={<Button onClick={() => navigate('/lacunae')}>{t('shortlist.browse')}</Button>}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -80,10 +78,14 @@ export function ShortlistReview() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5">
                         <Badge variant={categoryColors[lacuna.category]}>Cat {lacuna.category}</Badge>
-                        <span className="text-xs text-stone-400">#{item.rank}</span>
+                        <span className="text-xs text-stone-400 dark:text-stone-500">#{item.rank}</span>
                       </div>
-                      <p className="text-sm font-semibold text-stone-800">{lacuna.name_en}</p>
-                      <p className="text-xs text-stone-500 mt-0.5">{lacuna.name_mr}</p>
+                      <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">
+                        {lang === 'mr' ? lacuna.name_mr : lacuna.name_en}
+                      </p>
+                      <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                        {lang === 'mr' ? lacuna.name_en : lacuna.name_mr}
+                      </p>
                     </div>
                     <Button
                       size="sm"
@@ -91,7 +93,7 @@ export function ShortlistReview() {
                       loading={startAssessmentMutation.isPending}
                       onClick={() => startAssessmentMutation.mutate(lacuna.id)}
                     >
-                      Assess
+                      {t('shortlist.assess')}
                     </Button>
                   </div>
                 </Card>

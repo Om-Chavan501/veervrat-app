@@ -22,6 +22,11 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  .dark body {
+    background-color: theme('colors.stone.950');
+    color: theme('colors.stone.100');
+  }
+
   ::selection {
     background-color: theme('colors.sage.200');
     color: theme('colors.sage.900');
@@ -133,5 +138,9 @@
     background-color: rgba(247, 237, 228, 0.92);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+  }
+
+  .dark .glass {
+    background-color: rgba(28, 25, 23, 0.92);
   }
 }
