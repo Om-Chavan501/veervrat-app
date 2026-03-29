@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, List, Dict
 from datetime import datetime
 from ..models.models import (
-    JourneyState, AssessmentStatus, Rating, IrrationalBelief,
+    JourneyState, AssessmentStatus, Rating,
     LacunaCategory, VratmitraStatus
 )
 
@@ -270,7 +270,6 @@ class ClarificationLinkOut(BaseModel):
     lacuna_reduction_note: str
     unified_insight_note: str
     personal_context_note: str
-    irrational_belief: IrrationalBelief
     created_at: datetime
     assessment: Optional[AssessmentOut] = None
 
@@ -324,7 +323,6 @@ class SaveClarificationRequest(BaseModel):
     lacuna_reduction_note: str
     unified_insight_note: str
     personal_context_note: str
-    irrational_belief: IrrationalBelief
 
 
 class AddResolutionRequest(BaseModel):

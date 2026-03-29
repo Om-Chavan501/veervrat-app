@@ -35,12 +35,6 @@ class Rating(str, enum.Enum):
     NEVER = "NEVER"
 
 
-class IrrationalBelief(str, enum.Enum):
-    MUST_BE_LOVED = "MUST_BE_LOVED"
-    MUST_BE_COMPETENT = "MUST_BE_COMPETENT"
-    MUST_HAVE_COMFORT = "MUST_HAVE_COMFORT"
-
-
 class LacunaCategory(str, enum.Enum):
     A = "A"
     B = "B"
@@ -293,7 +287,6 @@ class SentenceJourneyAssessmentLink(Base):
     lacuna_reduction_note = Column(Text, nullable=False)
     unified_insight_note = Column(Text, nullable=False)
     personal_context_note = Column(Text, nullable=False)
-    irrational_belief = Column(SAEnum(IrrationalBelief), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     journey = relationship("SentenceJourney", back_populates="links")

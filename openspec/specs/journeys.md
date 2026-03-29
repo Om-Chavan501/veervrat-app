@@ -127,7 +127,7 @@ Sets journey state to COMPLETED. Requires at least one reflection.
 
 ### POST `/api/v1/journeys/{journey_id}/clarify/{assessment_id}`
 Creates or updates the clarification link connecting a journey to an assessment.
-The link captures the user's personal insight notes and irrational belief mapping.
+The link captures the user's personal insight notes about how this sentence connects to their lacuna.
 
 **Request**
 ```json
@@ -135,8 +135,7 @@ The link captures the user's personal insight notes and irrational belief mappin
   "virtue_relation_note": "string|null",
   "lacuna_reduction_note": "string (required)",
   "unified_insight_note": "string (required)",
-  "personal_context_note": "string (required)",
-  "irrational_belief": "MUST_BE_LOVED|MUST_BE_COMPETENT|MUST_HAVE_COMFORT"
+  "personal_context_note": "string (required)"
 }
 ```
 

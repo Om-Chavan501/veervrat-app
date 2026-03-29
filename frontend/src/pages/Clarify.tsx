@@ -11,25 +11,6 @@ import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { PageLoader } from '../components/ui/LoadingSpinner'
 import { getErrorMessage } from '../api/client'
-import type { IrrationalBelief } from '../types'
-
-const IRRATIONAL_BELIEFS: { value: IrrationalBelief; label: string; desc: string }[] = [
-  {
-    value: 'MUST_BE_LOVED',
-    label: 'Must be loved',
-    desc: 'I must be approved of and loved by others to feel worthwhile',
-  },
-  {
-    value: 'MUST_BE_COMPETENT',
-    label: 'Must be competent',
-    desc: 'I must be completely competent to consider myself worthwhile',
-  },
-  {
-    value: 'MUST_HAVE_COMFORT',
-    label: 'Must have comfort',
-    desc: 'Things must go my way; discomfort is unbearable',
-  },
-]
 
 export function Clarify() {
   const { journeyId, assessmentId } = useParams<{ journeyId: string; assessmentId: string }>()
@@ -40,7 +21,6 @@ export function Clarify() {
     lacuna_reduction_note: '',
     unified_insight_note: '',
     personal_context_note: '',
-    irrational_belief: '' as IrrationalBelief | '',
   })
 
   const { data: journey, isLoading: journeyLoading } = useQuery({
@@ -62,7 +42,6 @@ export function Clarify() {
         lacuna_reduction_note: form.lacuna_reduction_note,
         unified_insight_note: form.unified_insight_note,
         personal_context_note: form.personal_context_note,
-        irrational_belief: form.irrational_belief as IrrationalBelief,
       }),
     onSuccess: () => {
       toast.success('Clarification saved')
@@ -76,8 +55,7 @@ export function Clarify() {
   const isValid =
     form.lacuna_reduction_note.trim() &&
     form.unified_insight_note.trim() &&
-    form.personal_context_note.trim() &&
-    form.irrational_belief
+    form.personal_context_note.trim()
 
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl mx-auto">
@@ -154,32 +132,6 @@ export function Clarify() {
               placeholder="Describe how practicing this sentence cultivates the associated virtue..."
               rows={3}
             />
-          </div>
-        </Card>
-
-        <Card padding="md">
-          <h2 className="text-sm font-semibold text-stone-800 mb-2">
-            Which irrational belief does this address? *
-          </h2>
-          <p className="text-xs text-stone-500 mb-4">
-            Based on Ellis's Rational Emotive Behavior Therapy
-          </p>
-          <div className="space-y-3">
-            {IRRATIONAL_BELIEFS.map(({ value, label, desc }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setForm({ ...form, irrational_belief: value })}
-                className={`w-full text-left p-4 rounded-xl border transition-all ${
-                  form.irrational_belief === value
-                    ? 'border-sage-300 bg-sage-50 ring-2 ring-sage-200'
-                    : 'border-warm-200 bg-white hover:border-warm-300 hover:bg-warm-50'
-                }`}
-              >
-                <p className="text-sm font-semibold text-stone-800">{label}</p>
-                <p className="text-xs text-stone-500 mt-0.5">{desc}</p>
-              </button>
-            ))}
           </div>
         </Card>
 

@@ -3,7 +3,6 @@
 export type JourneyState = 'ACTIVE' | 'INACTIVE' | 'COMPLETED'
 export type AssessmentStatus = 'IN_PROGRESS' | 'COMPLETED'
 export type Rating = 'ALWAYS' | 'OFTEN' | 'RARELY' | 'NEVER'
-export type IrrationalBelief = 'MUST_BE_LOVED' | 'MUST_BE_COMPETENT' | 'MUST_HAVE_COMFORT'
 export type LacunaCategory = 'A' | 'B' | 'C'
 export type VratmitraStatus = 'PENDING' | 'ACTIVE' | 'DETACHED'
 
@@ -145,7 +144,6 @@ export interface ClarificationLink {
   lacuna_reduction_note: string
   unified_insight_note: string
   personal_context_note: string
-  irrational_belief: IrrationalBelief
   created_at: string
   assessment?: Assessment
 }

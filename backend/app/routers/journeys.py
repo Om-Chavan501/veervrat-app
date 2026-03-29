@@ -130,7 +130,6 @@ def save_clarification(
         existing.lacuna_reduction_note = req.lacuna_reduction_note
         existing.unified_insight_note = req.unified_insight_note
         existing.personal_context_note = req.personal_context_note
-        existing.irrational_belief = req.irrational_belief
         db.commit()
         db.refresh(existing)
         return existing
@@ -143,7 +142,6 @@ def save_clarification(
             lacuna_reduction_note=req.lacuna_reduction_note,
             unified_insight_note=req.unified_insight_note,
             personal_context_note=req.personal_context_note,
-            irrational_belief=req.irrational_belief,
         )
         db.add(link)
         db.commit()

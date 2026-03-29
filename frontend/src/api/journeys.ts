@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Journey, JourneyDetail, JourneyCounts, Resolution, ClarificationLink, IrrationalBelief, JourneyState } from '../types'
+import type { Journey, JourneyDetail, JourneyCounts, Resolution, ClarificationLink, JourneyState } from '../types'
 
 export const journeysApi = {
   list: (state?: JourneyState, skip = 0, limit = 50) =>
@@ -22,7 +22,6 @@ export const journeysApi = {
       lacuna_reduction_note: string
       unified_insight_note: string
       personal_context_note: string
-      irrational_belief: IrrationalBelief
     }
   ) =>
     api
