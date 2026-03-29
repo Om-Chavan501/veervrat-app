@@ -1,13 +1,16 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Route, BookOpen, ClipboardList, Users, ArrowRight, Plus, Bell, TrendingUp, Sparkles } from 'lucide-react'
+import { Route, BookOpen, ClipboardList, Users, ArrowRight, Plus, Bell, TrendingUp, Sparkles, Share2 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useLanguage } from '../contexts/LanguageContext'
 import { api } from '../api/client'
 import { journeysApi } from '../api/journeys'
 import { vratmitraApi } from '../api/vratmitra'
+import { invitesApi } from '../api/invites'
 import { Button } from '../components/ui/Button'
 import { PageLoader } from '../components/ui/LoadingSpinner'
+import { InviteSheet } from '../components/invite/InviteSheet'
 import type { DashboardStats, Journey, Vratmitra } from '../types'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -88,6 +91,7 @@ function InvitationBanner({ invitations, t, lang }: { invitations: Vratmitra[]; 
 export function Dashboard() {
   const { user } = useAuthStore()
   const { t, lang } = useLanguage()
+  const [inviteOpen, setInviteOpen] = useState(false)
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['dashboard-stats'],
@@ -102,6 +106,11 @@ export function Dashboard() {
   const { data: pendingInvitations } = useQuery({
     queryKey: ['pending-invitations'],
     queryFn: vratmitraApi.getPendingInvitations,
+  })
+
+  const { data: joined } = useQuery({
+    queryKey: ['invite-joined'],
+    queryFn: invitesApi.getJoined,
   })
 
   if (statsLoading || journeysLoading) return <PageLoader />
@@ -197,6 +206,56 @@ export function Dashboard() {
           ))}
         </div>
       </div>
+
+      {/* Invite activity */}
+      <div>
+        <h2 className="text-base font-semibold text-stone-800 dark:text-stone-100 mb-3">{t('invite.dashboardTitle')}</h2>
+        {joined && joined.length > 0 ? (
+          <button
+            onClick={() => setInviteOpen(true)}
+            className="w-full text-left rounded-2xl bg-white dark:bg-stone-900 border border-warm-200 dark:border-stone-700 shadow-card overflow-hidden hover:border-sage-200 hover:shadow-card-hover transition-all"
+          >
+            <div className="px-4 py-3 border-b border-warm-100 dark:border-stone-800 flex items-center gap-2">
+              <Share2 size={14} className="text-sage-600 dark:text-sage-400 flex-shrink-0" />
+              <p className="text-sm font-medium text-stone-700 dark:text-stone-300">
+                {t('invite.joinedCount').replace('{count}', String(joined.length))}
+              </p>
+            </div>
+            <div className="divide-y divide-warm-100 dark:divide-stone-800">
+              {joined.slice(0, 5).map((item, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                  <div className="w-7 h-7 rounded-full bg-sage-100 dark:bg-sage-900/40 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-sage-700 dark:text-sage-400">
+                      {item.name[0]?.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="flex-1 text-sm text-stone-700 dark:text-stone-300">
+                    {t('invite.joinedItem').replace('{name}', item.name)}
+                  </p>
+                  <p className="text-xs text-stone-400 dark:text-stone-500 flex-shrink-0">
+                    {formatDistanceToNow(new Date(item.joined_at), { addSuffix: true })}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </button>
+        ) : (
+          <button
+            onClick={() => setInviteOpen(true)}
+            className="w-full rounded-2xl border border-dashed border-warm-300 dark:border-stone-700 bg-warm-50 dark:bg-stone-900 p-5 flex items-center gap-3 hover:border-sage-300 dark:hover:border-sage-700 hover:bg-sage-50 dark:hover:bg-sage-900/10 transition-all group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-warm-100 dark:bg-stone-800 flex items-center justify-center flex-shrink-0 group-hover:bg-sage-100 dark:group-hover:bg-sage-900/30 transition-colors">
+              <Share2 size={17} className="text-stone-400 dark:text-stone-500 group-hover:text-sage-600 dark:group-hover:text-sage-400 transition-colors" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">{t('invite.inviteCta')}</p>
+              <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">{t('invite.noJoins')}</p>
+            </div>
+          </button>
+        )}
+      </div>
+
+      <InviteSheet open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
   )
 }

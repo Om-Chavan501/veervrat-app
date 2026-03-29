@@ -16,6 +16,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     confirm_password: str
+    invite_code: Optional[str] = None
 
     @field_validator("password")
     @classmethod
@@ -449,3 +450,27 @@ class DashboardStats(BaseModel):
 
 
 TokenResponse.model_rebuild()
+
+
+# ─────────────────────────────────────────
+# INVITES
+# ─────────────────────────────────────────
+
+class InviteOut(BaseModel):
+    code: str
+    uses_count: int
+
+    class Config:
+        from_attributes = True
+
+
+class InviteValidateOut(BaseModel):
+    inviter_name: str
+
+
+class InviteJoinedItem(BaseModel):
+    name: str
+    joined_at: datetime
+
+    class Config:
+        from_attributes = True

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models.models import User
+from ..models.models import User, UserInvite
 from ..schemas.schemas import RegisterRequest, LoginRequest, TokenResponse, RefreshRequest, UserOut
 from ..auth.jwt_handler import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from ..auth.dependencies import get_current_user
@@ -26,6 +26,14 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
         password_hash=hash_password(req.password),
     )
     db.add(user)
+    db.flush()  # get user.id before commit
+
+    if req.invite_code:
+        invite = db.query(UserInvite).filter(UserInvite.code == req.invite_code).first()
+        if invite:
+            user.invited_by = invite.user_id
+            invite.uses_count += 1
+
     db.commit()
     db.refresh(user)
 

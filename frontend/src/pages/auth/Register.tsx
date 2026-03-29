@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Sprout, Eye, EyeOff, Sun, Moon, Languages } from 'lucide-react'
 import { authApi } from '../../api/auth'
+import { invitesApi } from '../../api/invites'
 import { useAuthStore } from '../../store/authStore'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useLanguage } from '../../contexts/LanguageContext'
@@ -14,10 +15,19 @@ import { getErrorMessage } from '../../api/client'
 export function Register() {
   const navigate = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
+  const [searchParams] = useSearchParams()
+  const inviteCode = searchParams.get('invite') ?? undefined
   const { theme, toggleTheme } = useTheme()
   const { t, lang, setLang } = useLanguage()
   const [showPassword, setShowPassword] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm_password: '' })
+
+  const { data: inviteData } = useQuery({
+    queryKey: ['invite-validate', inviteCode],
+    queryFn: () => invitesApi.validate(inviteCode!),
+    enabled: !!inviteCode,
+    retry: false,
+  })
 
   const mutation = useMutation({
     mutationFn: authApi.register,
@@ -37,7 +47,7 @@ export function Register() {
       toast.error(t('register.passwordMismatch'))
       return
     }
-    mutation.mutate(form)
+    mutation.mutate({ ...form, invite_code: inviteCode })
   }
 
   return (
@@ -64,6 +74,15 @@ export function Register() {
           <h1 className="text-3xl font-bold text-stone-800 dark:text-stone-100">{t('register.title')}</h1>
           <p className="text-stone-500 dark:text-stone-400 mt-2 text-sm">{t('register.subtitle')}</p>
         </div>
+
+        {inviteData && (
+          <div className="mb-4 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-sage-50 dark:bg-sage-900/20 border border-sage-100 dark:border-sage-800">
+            <Sprout size={16} className="text-sage-600 dark:text-sage-400 flex-shrink-0" />
+            <p className="text-sm text-sage-700 dark:text-sage-400">
+              {t('invite.acknowledgePrefix')} <span className="font-semibold">{inviteData.inviter_name}</span>
+            </p>
+          </div>
+        )}
 
         <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-warm-200 dark:border-stone-700 p-8">
           <form onSubmit={handleSubmit} className="space-y-5">

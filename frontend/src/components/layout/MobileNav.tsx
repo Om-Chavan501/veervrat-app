@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, BookOpen, Route, Users, MoreHorizontal,
-  ClipboardList, Archive, BookMarked, LogOut, Sun, Moon, Languages,
+  ClipboardList, Archive, BookMarked, LogOut, Sun, Moon, Languages, Share2,
 } from 'lucide-react'
 import { cn } from '../ui/index'
 import { useAuthStore } from '../../store/authStore'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useLanguage } from '../../contexts/LanguageContext'
+import { InviteSheet } from '../invite/InviteSheet'
 
 const coreNavItems = [
   { to: '/dashboard', icon: LayoutDashboard, labelKey: 'nav.home' },
@@ -29,6 +30,7 @@ export function MobileNav() {
   const { theme, toggleTheme } = useTheme()
   const { t, lang, setLang } = useLanguage()
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
 
   const handleSignOut = () => {
     setSheetOpen(false)
@@ -170,6 +172,15 @@ export function MobileNav() {
             </button>
           </div>
 
+          {/* Invite */}
+          <button
+            onClick={() => { setSheetOpen(false); setInviteOpen(true) }}
+            className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-warm-50 dark:hover:bg-stone-800 transition-colors"
+          >
+            <Share2 size={17} className="text-stone-400 dark:text-stone-500" />
+            {t('invite.inviteCta')}
+          </button>
+
           {/* Divider */}
           <div className="h-px bg-warm-100 dark:bg-stone-800 my-2" />
 
@@ -194,6 +205,7 @@ export function MobileNav() {
           </button>
         </div>
       </div>
+      <InviteSheet open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </>
   )
 }

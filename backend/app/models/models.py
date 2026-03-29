@@ -67,6 +67,8 @@ class User(Base):
     password_hash = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    invited_by = Column(String, ForeignKey("users.id"), nullable=True)
+
     # Relationships
     admin_role = relationship("AdminRole", back_populates="user", uselist=False)
     shortlist_sessions = relationship("LacunaShortlistSession", back_populates="user")
@@ -74,6 +76,19 @@ class User(Base):
     journeys = relationship("SentenceJourney", back_populates="user")
     vratmitra_links = relationship("JourneyVratmitra", back_populates="user")
     reflection_comments = relationship("ReflectionComment", back_populates="user")
+    invite = relationship("UserInvite", back_populates="user", uselist=False)
+
+
+class UserInvite(Base):
+    __tablename__ = "user_invites"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    user_id = Column(String, ForeignKey("users.id"), unique=True, nullable=False)
+    code = Column(String, unique=True, nullable=False, index=True)
+    uses_count = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="invite")
 
 
 class AdminRole(Base):

@@ -15,6 +15,7 @@ import { Vratmitra } from './pages/Vratmitra'
 import { Ontology } from './pages/Ontology'
 import { ShortlistReview } from './pages/ShortlistReview'
 import { Assessments } from './pages/Assessments'
+import { JoinRedirect } from './pages/JoinRedirect'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -31,6 +32,9 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <Routes>
+      {/* Join redirect — public, no auth check */}
+      <Route path="/join/:code" element={<JoinRedirect />} />
+
       {/* Public routes */}
       <Route
         path="/login"
