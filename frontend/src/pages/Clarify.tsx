@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, FileText } from 'lucide-react'
 import { journeysApi } from '../api/journeys'
 import { assessmentsApi } from '../api/assessments'
 import { Button } from '../components/ui/Button'
@@ -35,6 +35,13 @@ export function Clarify() {
     enabled: !!assessmentId,
   })
 
+  // Fetch completed assessments only when no assessmentId in URL (picker fallback)
+  const { data: allAssessments, isLoading: assessmentsListLoading } = useQuery({
+    queryKey: ['assessments-list'],
+    queryFn: () => assessmentsApi.list(),
+    enabled: !assessmentId,
+  })
+
   const saveMutation = useMutation({
     mutationFn: () =>
       journeysApi.saveClarification(journeyId!, assessmentId!, {
@@ -50,7 +57,51 @@ export function Clarify() {
     onError: (e) => toast.error(getErrorMessage(e)),
   })
 
-  if (journeyLoading || assessmentLoading) return <PageLoader />
+  if (journeyLoading || assessmentLoading || assessmentsListLoading) return <PageLoader />
+
+  if (!assessmentId) {
+    const completedAssessments = allAssessments?.filter((a) => a.status === 'COMPLETED') ?? []
+    return (
+      <div className="space-y-6 animate-fade-in max-w-2xl mx-auto">
+        <Link
+          to={`/journeys/${journeyId}`}
+          className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-700 transition-colors"
+        >
+          <ArrowLeft size={14} />
+          Back to journey
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">Articulate your understanding</h1>
+          <p className="text-stone-500 mt-1 text-sm">Pick which assessment to clarify against</p>
+        </div>
+        {completedAssessments.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-warm-300 bg-warm-50 p-8 text-center">
+            <FileText size={24} className="text-stone-300 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-stone-600 mb-1">No completed assessments</p>
+            <p className="text-xs text-stone-400">Complete an assessment first to clarify against it.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {completedAssessments.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => navigate(`/journeys/${journeyId}/clarify/${a.id}`)}
+                className="w-full text-left rounded-2xl border border-warm-200 bg-white p-4 hover:border-sage-300 hover:bg-sage-50 transition-colors"
+              >
+                <p className="text-sm font-semibold text-stone-800">{a.lacuna?.name_en}</p>
+                {a.completed_at && (
+                  <p className="text-xs text-stone-400 mt-0.5">
+                    Completed {new Date(a.completed_at).toLocaleDateString()}
+                  </p>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   const isValid =
     form.lacuna_reduction_note.trim() &&
@@ -77,20 +128,6 @@ export function Clarify() {
         </p>
       </div>
 
-      {/* Sentence context */}
-      <Card padding="md" className="bg-sage-50 border-sage-100">
-        <p className="text-xs font-semibold text-sage-700 uppercase tracking-wide mb-2">
-          Sentence you're working on
-        </p>
-        <p className="text-sm font-medium text-stone-800">{journey?.sentence?.text_en}</p>
-        {assessment?.lacuna && (
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs text-stone-500">Lacuna:</span>
-            <Badge variant="muted">{assessment.lacuna.name_en}</Badge>
-          </div>
-        )}
-      </Card>
-
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -108,6 +145,7 @@ export function Clarify() {
               placeholder="Explain the connection between practicing this sentence and reducing your identified weakness..."
               rows={4}
               required
+              hint={assessment?.lacuna ? `Lacuna: ${assessment.lacuna.name_en}` : undefined}
             />
             <Textarea
               label="What personal incident or pattern does this address? *"
@@ -116,6 +154,7 @@ export function Clarify() {
               placeholder="Describe a specific situation from your life that this sentence speaks to..."
               rows={4}
               required
+              hint={journey?.sentence?.text_en ? `Sentence: "${journey.sentence.text_en}"` : undefined}
             />
             <Textarea
               label="Unified insight — how does it all connect? *"
@@ -124,6 +163,10 @@ export function Clarify() {
               placeholder="Synthesize your understanding of how this sentence, the virtue, and your lacuna are interconnected..."
               rows={4}
               required
+              hint={[
+                journey?.sentence?.text_en ? `Sentence: "${journey.sentence.text_en}"` : null,
+                assessment?.lacuna ? `Lacuna: ${assessment.lacuna.name_en}` : null,
+              ].filter(Boolean).join(' · ') || undefined}
             />
             <Textarea
               label="How does this relate to the virtue? (optional)"
@@ -131,6 +174,7 @@ export function Clarify() {
               onChange={(e) => setForm({ ...form, virtue_relation_note: e.target.value })}
               placeholder="Describe how practicing this sentence cultivates the associated virtue..."
               rows={3}
+              hint={journey?.sentence?.sub_virtue?.virtue?.name_en ? `Virtue: ${journey.sentence.sub_virtue.virtue.name_en}` : undefined}
             />
           </div>
         </Card>

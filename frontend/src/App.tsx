@@ -70,7 +70,7 @@ export default function App() {
         <Route path="/journeys/:journeyId" element={<JourneyDetail />} />
         <Route
           path="/journeys/:journeyId/clarify"
-          element={<Navigate to="/journeys" replace />}
+          element={<Clarify />}
         />
         <Route
           path="/journeys/:journeyId/clarify/:assessmentId"

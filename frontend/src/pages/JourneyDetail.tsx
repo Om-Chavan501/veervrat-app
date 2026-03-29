@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
   BookOpen, Plus, Pause, Play, CheckCircle,
-  Eye, Users, ArrowLeft, Calendar, FileText, Lightbulb, Shield, UserCheck, Target
+  Eye, Users, ArrowLeft, Calendar, Lightbulb, Shield, UserCheck, Target
 } from 'lucide-react'
 import { journeysApi } from '../api/journeys'
 import { reflectionsApi } from '../api/reflections'
@@ -24,16 +24,16 @@ import { JourneyPhaseBar, type JourneyPhase } from '../components/journey/Journe
 import { CatalogPicker } from '../components/journey/CatalogPicker'
 import { ExposureList, ResolutionList } from '../components/journey/ActivityList'
 import { ChallengeCard } from '../components/journey/ChallengeCard'
+import { ClarificationSetupCard } from '../components/journey/ClarificationSetupCard'
 import { formatDistanceToNow, format } from 'date-fns'
 import type { Reflection, ExposureStatus, ResolutionStatus } from '../types'
 
-const PRACTICE_TABS = ['Exposures', 'Resolutions', 'Clarification', 'Reflections'] as const
+const PRACTICE_TABS = ['Exposures', 'Resolutions', 'Reflections'] as const
 type PracticeTab = (typeof PRACTICE_TABS)[number]
 
 const PRACTICE_TAB_ICONS: Record<PracticeTab, React.ElementType> = {
   Exposures: Eye,
   Resolutions: Lightbulb,
-  Clarification: FileText,
   Reflections: BookOpen,
 }
 
@@ -353,6 +353,13 @@ export function JourneyDetail() {
       {/* ── SETUP PHASE ── */}
       {activePhase === 'setup' && (
         <div className="space-y-4 animate-fade-in">
+          {/* Clarification card */}
+          <ClarificationSetupCard
+            journeyId={journeyId!}
+            originatingAssessmentId={journey.originating_assessment_id}
+            links={journey.links}
+          />
+
           {/* Vratmitra section */}
           <Card padding="md">
             <div className="flex items-center justify-between gap-3 mb-3">
@@ -556,40 +563,6 @@ export function JourneyDetail() {
                     </Button>
                   ) : undefined}
                 />
-              )}
-            </div>
-          )}
-
-          {practiceTab === 'Clarification' && (
-            <div className="space-y-4">
-              {journey.links.length > 0 ? (
-                journey.links.map((link) => (
-                  <div key={link.id} className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {[
-                        { label: 'Lacuna reduction', value: link.lacuna_reduction_note },
-                        { label: 'Personal context', value: link.personal_context_note },
-                        { label: 'Unified insight', value: link.unified_insight_note },
-                        link.virtue_relation_note ? { label: 'Virtue relation', value: link.virtue_relation_note } : null,
-                      ].filter(Boolean).map((item) => (
-                        <Card key={item!.label} padding="md">
-                          <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-2">{item!.label}</p>
-                          <p className="text-sm text-stone-700 leading-relaxed">{item!.value}</p>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-warm-300 bg-warm-50 p-8 text-center">
-                  <FileText size={24} className="text-stone-300 mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-stone-600 mb-1">No clarification yet</p>
-                  {isActive && (
-                    <Link to={`/journeys/${journeyId}/clarify`}>
-                      <Button size="sm" className="mt-3">Add clarification</Button>
-                    </Link>
-                  )}
-                </div>
               )}
             </div>
           )}
