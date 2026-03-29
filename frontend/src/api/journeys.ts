@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Journey, JourneyDetail, JourneyCounts, Resolution, ClarificationLink, JourneyState } from '../types'
+import type { Journey, JourneyDetail, JourneyCounts, ClarificationLink, JourneyState } from '../types'
 
 export const journeysApi = {
   list: (state?: JourneyState, skip = 0, limit = 50) =>
@@ -30,17 +30,6 @@ export const journeysApi = {
 
   getClarifications: (journeyId: string) =>
     api.get<ClarificationLink[]>(`/journeys/${journeyId}/clarifications`).then((r) => r.data),
-
-  addResolution: (journeyId: string, text: string, frequency: string) =>
-    api.post<Resolution>(`/journeys/${journeyId}/resolutions`, { text, frequency }).then((r) => r.data),
-
-  updateResolution: (journeyId: string, resolutionId: string, text: string, frequency: string) =>
-    api
-      .put<Resolution>(`/journeys/${journeyId}/resolutions/${resolutionId}`, { text, frequency })
-      .then((r) => r.data),
-
-  deleteResolution: (journeyId: string, resolutionId: string) =>
-    api.delete(`/journeys/${journeyId}/resolutions/${resolutionId}`).then((r) => r.data),
 
   pause: (journeyId: string, reason?: string) =>
     api.post<Journey>(`/journeys/${journeyId}/pause`, { reason }).then((r) => r.data),

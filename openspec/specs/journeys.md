@@ -21,10 +21,12 @@ Creating a journey for a sentence that already has one simply returns the existi
 
 ```
 SentenceJourney  (user + sentence, state: ACTIVE|INACTIVE|COMPLETED)
+  - originating_assessment_id : uuid|null  (assessment that triggered creation; null for legacy)
   ├─ SentenceJourneyAssessmentLink  (clarification — journey + assessment link)
-  ├─ ResolutionInstance             (text + frequency commitment)
+  ├─ JourneyResolution              (see journey-activities.md)
+  ├─ JourneyExposure                (see exposures.md)
+  ├─ JourneyChallenge               (see journey-activities.md)
   ├─ DailyReflection                (see reflections.md)
-  ├─ ExposureInstance               (see exposures.md)
   └─ JourneyVratmitra               (see vratmitra.md)
 ```
 
@@ -43,6 +45,7 @@ Returns all journeys for the current user.
 ```json
 [{
   "id": "uuid", "user_id": "uuid", "sentence_id": "uuid",
+  "originating_assessment_id": "uuid|null",
   "state": "ACTIVE|INACTIVE|COMPLETED",
   "created_at": "datetime", "inactive_at": "datetime|null", "inactive_reason": "string|null",
   "sentence": { ...SentenceDetailOut with sub_virtue → virtue chain... }
@@ -69,7 +72,7 @@ Creates a new journey (or returns existing) for a sentence, linked to an assessm
 { "sentence_id": "uuid", "assessment_id": "uuid" }
 ```
 
-**Response** `200 JourneyDetailOut` — full detail with clarification links and resolutions
+**Response** `200 JourneyDetailOut` — full detail with clarification links, resolutions, and `originating_assessment_id`
 
 **Errors**
 - `404` — assessment not found
@@ -113,13 +116,13 @@ Sets journey state back to ACTIVE from INACTIVE (clears inactive_at and inactive
 ---
 
 ### POST `/api/v1/journeys/{journey_id}/complete`
-Sets journey state to COMPLETED. Requires at least one reflection.
+Sets journey state to COMPLETED. Requires a `JourneyChallenge` with `status=COMPLETED`.
 
 **Response** `200 JourneyOut`
 
 **Errors**
 - `400` — journey is not ACTIVE
-- `400` — no reflections exist for this journey
+- `400` — no COMPLETED challenge exists for this journey
 
 ---
 
@@ -156,24 +159,25 @@ Lists all clarification links for a journey, newest first.
 
 ## Resolutions Sub-Resource
 
-Resolutions can only be added/edited/deleted on ACTIVE journeys, and only after at least
-one clarification link exists.
+Resolutions (catalog-backed or custom) can be added/edited/deleted at any point on an
+ACTIVE journey. No clarification link is required. See `journey-activities.md` for the
+full `JourneyResolution` model and endpoint spec.
 
 ### POST `/api/v1/journeys/{journey_id}/resolutions`
-**Request** `{ "text": "string", "frequency": "string" }`
-**Response** `200 ResolutionOut`
+**Request** `{ "catalog_item_id": "uuid|null", "title": "string", "frequency": "string" }`
+**Response** `200 JourneyResolutionOut`
 **Errors**
 - `400` — journey not ACTIVE
-- `400` — no clarification link exists yet
+- `403` — caller is not the journey owner
 
 ### PUT `/api/v1/journeys/{journey_id}/resolutions/{resolution_id}`
-**Request** `{ "text": "string", "frequency": "string" }`
-**Response** `200 ResolutionOut`
-**Errors** — journey not ACTIVE
+**Request** `{ "title": "string|null", "frequency": "string|null", "status": "ACTIVE|PAUSED|DONE|null" }`
+**Response** `200 JourneyResolutionOut`
+**Errors** — resolution not found, journey not ACTIVE, or 403
 
 ### DELETE `/api/v1/journeys/{journey_id}/resolutions/{resolution_id}`
 **Response** `200 { "success": true }`
-**Errors** — journey not ACTIVE
+**Errors** — resolution not found, journey not ACTIVE, or 403
 
 ---
 
@@ -182,8 +186,8 @@ one clarification link exists.
 ### Journey creation
 ```
 GIVEN a valid sentence_id and assessment_id belonging to the current user
-WHEN POST /journeys is called
-THEN a new ACTIVE journey is created and returned with full detail
+WHEN POST /journeys is called with { "sentence_id": "...", "assessment_id": "..." }
+THEN a new ACTIVE journey is created with originating_assessment_id set to the provided assessment_id
 
 GIVEN the user already has a journey for that sentence
 WHEN POST /journeys is called with the same sentence_id
@@ -192,6 +196,9 @@ THEN the existing journey is returned (idempotent)
 GIVEN an assessment_id not belonging to the current user
 WHEN POST /journeys is called
 THEN a 403 error is returned
+
+WHEN GET /journeys/{id} is called
+THEN the response includes originating_assessment_id (may be null for legacy journeys)
 ```
 
 ### Lifecycle
@@ -204,11 +211,15 @@ GIVEN an INACTIVE journey
 WHEN POST /journeys/{id}/resume is called
 THEN state returns to ACTIVE, inactive_at and inactive_reason are cleared
 
-GIVEN an ACTIVE journey with at least one reflection
+GIVEN an ACTIVE journey with a COMPLETED JourneyChallenge
 WHEN POST /journeys/{id}/complete is called
 THEN state becomes COMPLETED
 
-GIVEN an ACTIVE journey with no reflections
+GIVEN an ACTIVE journey with no COMPLETED challenge
+WHEN POST /journeys/{id}/complete is called
+THEN a 400 error is returned with a message indicating a challenge must be completed first
+
+GIVEN an ACTIVE journey where the challenge status is PLANNED (not COMPLETED)
 WHEN POST /journeys/{id}/complete is called
 THEN a 400 error is returned
 
@@ -230,13 +241,9 @@ THEN the existing link is updated (upsert behaviour)
 
 ### Resolutions
 ```
-GIVEN an ACTIVE journey with a clarification link
+GIVEN an ACTIVE journey (with or without clarification links)
 WHEN POST /journeys/{id}/resolutions is called
-THEN a new resolution is created
-
-GIVEN an ACTIVE journey with NO clarification link
-WHEN POST /journeys/{id}/resolutions is called
-THEN a 400 error is returned
+THEN a new resolution is created (no clarification gate)
 
 GIVEN an INACTIVE or COMPLETED journey
 WHEN any resolution write endpoint is called

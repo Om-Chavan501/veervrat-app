@@ -143,7 +143,7 @@ export function AssessmentResults() {
     setCreating(false)
     if (firstJourneyId) {
       if (selectedIds.size === 1) {
-        navigate(`/journeys/${firstJourneyId}/clarify/${assessmentId}`)
+        navigate(`/journeys/${firstJourneyId}`)
       } else {
         toast.success(t('results.started').replace('{count}', String(selectedIds.size)))
         navigate('/journeys')

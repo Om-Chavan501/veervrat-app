@@ -47,6 +47,24 @@ class VratmitraStatus(str, enum.Enum):
     DETACHED = "DETACHED"
 
 
+class ExposureStatus(str, enum.Enum):
+    PLANNED = "PLANNED"
+    TAKEN = "TAKEN"
+    SKIPPED = "SKIPPED"
+
+
+class ResolutionStatus(str, enum.Enum):
+    ACTIVE = "ACTIVE"
+    PAUSED = "PAUSED"
+    DONE = "DONE"
+
+
+class ChallengeStatus(str, enum.Enum):
+    PLANNED = "PLANNED"
+    COMPLETED = "COMPLETED"
+    ABANDONED = "ABANDONED"
+
+
 # ─────────────────────────────────────────
 # CORE USER & ROLES
 # ─────────────────────────────────────────
@@ -165,6 +183,9 @@ class Sentence(Base):
     assessment_responses = relationship("AssessmentResponse", back_populates="sentence")
     suggested_snapshots = relationship("SuggestedSentenceSnapshot", back_populates="sentence")
     journeys = relationship("SentenceJourney", back_populates="sentence")
+    exposure_catalog_items = relationship("ExposureCatalogItem", back_populates="sentence")
+    resolution_catalog_items = relationship("ResolutionCatalogItem", back_populates="sentence")
+    challenge_catalog_items = relationship("ChallengeCatalogItem", back_populates="sentence")
 
 
 # ─────────────────────────────────────────
@@ -252,6 +273,45 @@ class SuggestedSentenceSnapshot(Base):
 
 
 # ─────────────────────────────────────────
+# ACTIVITY CATALOG (GLOBAL, SENTENCE-MAPPED)
+# ─────────────────────────────────────────
+
+class ExposureCatalogItem(Base):
+    __tablename__ = "exposure_catalog_items"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    sentence_id = Column(String, ForeignKey("sentences.id"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+
+    sentence = relationship("Sentence", back_populates="exposure_catalog_items")
+
+
+class ResolutionCatalogItem(Base):
+    __tablename__ = "resolution_catalog_items"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    sentence_id = Column(String, ForeignKey("sentences.id"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    frequency_hint = Column(String, nullable=True)
+
+    sentence = relationship("Sentence", back_populates="resolution_catalog_items")
+
+
+class ChallengeCatalogItem(Base):
+    __tablename__ = "challenge_catalog_items"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    sentence_id = Column(String, ForeignKey("sentences.id"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    achievement_criteria = Column(Text, nullable=True)
+
+    sentence = relationship("Sentence", back_populates="challenge_catalog_items")
+
+
+# ─────────────────────────────────────────
 # SENTENCE JOURNEY (CORE)
 # ─────────────────────────────────────────
 
@@ -261,6 +321,7 @@ class SentenceJourney(Base):
     id = Column(String, primary_key=True, default=gen_uuid)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     sentence_id = Column(String, ForeignKey("sentences.id"), nullable=False)
+    originating_assessment_id = Column(String, ForeignKey("lacuna_assessments.id"), nullable=True)
     state = Column(SAEnum(JourneyState), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     inactive_at = Column(DateTime, nullable=True)
@@ -268,11 +329,13 @@ class SentenceJourney(Base):
 
     user = relationship("User", back_populates="journeys")
     sentence = relationship("Sentence", back_populates="journeys")
+    originating_assessment = relationship("LacunaAssessment", foreign_keys=[originating_assessment_id])
     links = relationship("SentenceJourneyAssessmentLink", back_populates="journey")
-    resolutions = relationship("ResolutionInstance", back_populates="journey")
     reflections = relationship("DailyReflection", back_populates="journey")
-    exposures = relationship("ExposureInstance", back_populates="journey")
     vratmitras = relationship("JourneyVratmitra", back_populates="journey")
+    journey_exposures = relationship("JourneyExposure", back_populates="journey")
+    journey_resolutions = relationship("JourneyResolution", back_populates="journey")
+    journey_challenge = relationship("JourneyChallenge", back_populates="journey", uselist=False)
 
     __table_args__ = (UniqueConstraint("user_id", "sentence_id"),)
 
@@ -293,6 +356,59 @@ class SentenceJourneyAssessmentLink(Base):
     assessment = relationship("LacunaAssessment", back_populates="links")
 
     __table_args__ = (UniqueConstraint("journey_id", "assessment_id"),)
+
+
+# ─────────────────────────────────────────
+# JOURNEY ACTIVITIES
+# ─────────────────────────────────────────
+
+class JourneyExposure(Base):
+    __tablename__ = "journey_exposures"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    journey_id = Column(String, ForeignKey("sentence_journeys.id"), nullable=False)
+    catalog_item_id = Column(String, ForeignKey("exposure_catalog_items.id"), nullable=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    status = Column(SAEnum(ExposureStatus, name="exposurestatus"), nullable=False, default=ExposureStatus.PLANNED)
+    taken_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    journey = relationship("SentenceJourney", back_populates="journey_exposures")
+    catalog_item = relationship("ExposureCatalogItem")
+
+
+class JourneyResolution(Base):
+    __tablename__ = "journey_resolutions"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    journey_id = Column(String, ForeignKey("sentence_journeys.id"), nullable=False)
+    catalog_item_id = Column(String, ForeignKey("resolution_catalog_items.id"), nullable=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    frequency = Column(String, nullable=False)
+    status = Column(SAEnum(ResolutionStatus, name="resolutionstatus"), nullable=False, default=ResolutionStatus.ACTIVE)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    journey = relationship("SentenceJourney", back_populates="journey_resolutions")
+    catalog_item = relationship("ResolutionCatalogItem")
+
+
+class JourneyChallenge(Base):
+    __tablename__ = "journey_challenges"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    journey_id = Column(String, ForeignKey("sentence_journeys.id"), nullable=False, unique=True)
+    catalog_item_id = Column(String, ForeignKey("challenge_catalog_items.id"), nullable=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    achievement_criteria = Column(Text, nullable=False)
+    status = Column(SAEnum(ChallengeStatus, name="challengestatus"), nullable=False, default=ChallengeStatus.PLANNED)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    journey = relationship("SentenceJourney", back_populates="journey_challenge")
+    catalog_item = relationship("ChallengeCatalogItem")
 
 
 # ─────────────────────────────────────────
@@ -332,38 +448,6 @@ class JourneyVratmitra(Base):
     user = relationship("User", back_populates="vratmitra_links")
 
     __table_args__ = (UniqueConstraint("journey_id", "user_id"),)
-
-
-# ─────────────────────────────────────────
-# EXPOSURES
-# ─────────────────────────────────────────
-
-class ExposureInstance(Base):
-    __tablename__ = "exposure_instances"
-
-    id = Column(String, primary_key=True, default=gen_uuid)
-    journey_id = Column(String, ForeignKey("sentence_journeys.id"), nullable=False)
-    description = Column(Text, nullable=False)
-    context_note = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    journey = relationship("SentenceJourney", back_populates="exposures")
-
-
-# ─────────────────────────────────────────
-# RESOLUTIONS
-# ─────────────────────────────────────────
-
-class ResolutionInstance(Base):
-    __tablename__ = "resolution_instances"
-
-    id = Column(String, primary_key=True, default=gen_uuid)
-    journey_id = Column(String, ForeignKey("sentence_journeys.id"), nullable=False)
-    text = Column(Text, nullable=False)
-    frequency = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    journey = relationship("SentenceJourney", back_populates="resolutions")
 
 
 # ─────────────────────────────────────────

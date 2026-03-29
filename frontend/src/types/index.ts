@@ -5,6 +5,9 @@ export type AssessmentStatus = 'IN_PROGRESS' | 'COMPLETED'
 export type Rating = 'ALWAYS' | 'OFTEN' | 'RARELY' | 'NEVER'
 export type LacunaCategory = 'A' | 'B' | 'C'
 export type VratmitraStatus = 'PENDING' | 'ACTIVE' | 'DETACHED'
+export type ExposureStatus = 'PLANNED' | 'TAKEN' | 'SKIPPED'
+export type ResolutionStatus = 'ACTIVE' | 'PAUSED' | 'DONE'
+export type ChallengeStatus = 'PLANNED' | 'COMPLETED' | 'ABANDONED'
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -128,11 +131,60 @@ export interface AssessmentDetail extends Assessment {
 
 // ─── Journey ──────────────────────────────────────────────────────────────────
 
-export interface Resolution {
+export interface ExposureCatalogItem {
+  id: string
+  sentence_id: string
+  title: string
+  description?: string
+}
+
+export interface ResolutionCatalogItem {
+  id: string
+  sentence_id: string
+  title: string
+  description?: string
+  frequency_hint?: string
+}
+
+export interface ChallengeCatalogItem {
+  id: string
+  sentence_id: string
+  title: string
+  description?: string
+  achievement_criteria?: string
+}
+
+export interface JourneyExposure {
   id: string
   journey_id: string
-  text: string
+  catalog_item_id?: string
+  title: string
+  description?: string
+  status: ExposureStatus
+  taken_at?: string
+  created_at: string
+}
+
+export interface JourneyResolution {
+  id: string
+  journey_id: string
+  catalog_item_id?: string
+  title: string
+  description?: string
   frequency: string
+  status: ResolutionStatus
+  created_at: string
+}
+
+export interface JourneyChallenge {
+  id: string
+  journey_id: string
+  catalog_item_id?: string
+  title: string
+  description?: string
+  achievement_criteria: string
+  status: ChallengeStatus
+  completed_at?: string
   created_at: string
 }
 
@@ -152,6 +204,7 @@ export interface Journey {
   id: string
   user_id: string
   sentence_id: string
+  originating_assessment_id?: string
   state: JourneyState
   created_at: string
   inactive_at?: string
@@ -161,7 +214,9 @@ export interface Journey {
 
 export interface JourneyDetail extends Journey {
   links: ClarificationLink[]
-  resolutions: Resolution[]
+  journey_exposures: JourneyExposure[]
+  journey_resolutions: JourneyResolution[]
+  journey_challenge?: JourneyChallenge
 }
 
 export interface JourneyCounts {
@@ -191,16 +246,6 @@ export interface Reflection {
   difficulty?: number
   created_at: string
   comments: ReflectionComment[]
-}
-
-// ─── Exposure ─────────────────────────────────────────────────────────────────
-
-export interface Exposure {
-  id: string
-  journey_id: string
-  description: string
-  context_note?: string
-  created_at: string
 }
 
 // ─── Vratmitra ────────────────────────────────────────────────────────────────

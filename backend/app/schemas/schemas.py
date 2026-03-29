@@ -3,7 +3,8 @@ from typing import Optional, List, Dict
 from datetime import datetime
 from ..models.models import (
     JourneyState, AssessmentStatus, Rating,
-    LacunaCategory, VratmitraStatus
+    LacunaCategory, VratmitraStatus,
+    ExposureStatus, ResolutionStatus, ChallengeStatus
 )
 
 
@@ -251,17 +252,6 @@ class StartAssessmentRequest(BaseModel):
 # JOURNEYS
 # ─────────────────────────────────────────
 
-class ResolutionOut(BaseModel):
-    id: str
-    journey_id: str
-    text: str
-    frequency: str
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
 class ClarificationLinkOut(BaseModel):
     id: str
     journey_id: str
@@ -277,10 +267,129 @@ class ClarificationLinkOut(BaseModel):
         from_attributes = True
 
 
+# ─── Catalog schemas ───
+
+class ExposureCatalogItemOut(BaseModel):
+    id: str
+    sentence_id: str
+    title: str
+    description: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ResolutionCatalogItemOut(BaseModel):
+    id: str
+    sentence_id: str
+    title: str
+    description: Optional[str] = None
+    frequency_hint: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ChallengeCatalogItemOut(BaseModel):
+    id: str
+    sentence_id: str
+    title: str
+    description: Optional[str] = None
+    achievement_criteria: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ─── Journey activity schemas ───
+
+class JourneyExposureOut(BaseModel):
+    id: str
+    journey_id: str
+    catalog_item_id: Optional[str] = None
+    title: str
+    description: Optional[str] = None
+    status: ExposureStatus
+    taken_at: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class JourneyExposureCreate(BaseModel):
+    catalog_item_id: Optional[str] = None
+    title: str
+    description: Optional[str] = None
+
+
+class JourneyExposureUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[ExposureStatus] = None
+
+
+class JourneyResolutionOut(BaseModel):
+    id: str
+    journey_id: str
+    catalog_item_id: Optional[str] = None
+    title: str
+    description: Optional[str] = None
+    frequency: str
+    status: ResolutionStatus
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class JourneyResolutionCreate(BaseModel):
+    catalog_item_id: Optional[str] = None
+    title: str
+    description: Optional[str] = None
+    frequency: str
+
+
+class JourneyResolutionUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    frequency: Optional[str] = None
+    status: Optional[ResolutionStatus] = None
+
+
+class JourneyChallengeOut(BaseModel):
+    id: str
+    journey_id: str
+    catalog_item_id: Optional[str] = None
+    title: str
+    description: Optional[str] = None
+    achievement_criteria: str
+    status: ChallengeStatus
+    completed_at: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class JourneyChallengeCreate(BaseModel):
+    catalog_item_id: Optional[str] = None
+    title: str
+    description: Optional[str] = None
+    achievement_criteria: str
+
+
+class ChallengeOutcome(BaseModel):
+    outcome: ChallengeStatus  # COMPLETED or ABANDONED
+
+
+# ─── Journey out schemas ───
+
 class JourneyOut(BaseModel):
     id: str
     user_id: str
     sentence_id: str
+    originating_assessment_id: Optional[str] = None
     state: JourneyState
     created_at: datetime
     inactive_at: Optional[datetime] = None
@@ -295,13 +404,16 @@ class JourneyDetailOut(BaseModel):
     id: str
     user_id: str
     sentence_id: str
+    originating_assessment_id: Optional[str] = None
     state: JourneyState
     created_at: datetime
     inactive_at: Optional[datetime] = None
     inactive_reason: Optional[str] = None
     sentence: Optional[SentenceDetailOut] = None
     links: List[ClarificationLinkOut] = []
-    resolutions: List[ResolutionOut] = []
+    journey_exposures: List[JourneyExposureOut] = []
+    journey_resolutions: List[JourneyResolutionOut] = []
+    journey_challenge: Optional[JourneyChallengeOut] = None
 
     class Config:
         from_attributes = True
@@ -323,16 +435,6 @@ class SaveClarificationRequest(BaseModel):
     lacuna_reduction_note: str
     unified_insight_note: str
     personal_context_note: str
-
-
-class AddResolutionRequest(BaseModel):
-    text: str
-    frequency: str
-
-
-class UpdateResolutionRequest(BaseModel):
-    text: str
-    frequency: str
 
 
 class PauseJourneyRequest(BaseModel):

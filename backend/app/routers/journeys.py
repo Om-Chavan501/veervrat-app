@@ -5,13 +5,13 @@ from typing import List, Optional
 from datetime import datetime
 from ..database import get_db
 from ..models.models import (
-    User, SentenceJourney, SentenceJourneyAssessmentLink, ResolutionInstance,
-    LacunaAssessment, Sentence, JourneyState, SubVirtue, Virtue
+    User, SentenceJourney, SentenceJourneyAssessmentLink,
+    LacunaAssessment, Sentence, JourneyState, SubVirtue, Virtue,
+    JourneyChallenge, ChallengeStatus, JourneyExposure, JourneyResolution
 )
 from ..schemas.schemas import (
     JourneyOut, JourneyDetailOut, JourneyCountsOut, CreateJourneyRequest,
-    SaveClarificationRequest, AddResolutionRequest, UpdateResolutionRequest,
-    PauseJourneyRequest, ResolutionOut, ClarificationLinkOut
+    SaveClarificationRequest, PauseJourneyRequest, ClarificationLinkOut
 )
 from ..auth.dependencies import get_current_user
 import uuid
@@ -82,6 +82,7 @@ def create_or_link_journey(
             id=str(uuid.uuid4()),
             user_id=current_user.id,
             sentence_id=req.sentence_id,
+            originating_assessment_id=req.assessment_id,
             state=JourneyState.ACTIVE,
         )
         db.add(journey)
@@ -170,94 +171,6 @@ def list_clarifications(
     )
 
 
-@router.post("/{journey_id}/resolutions", response_model=ResolutionOut)
-def add_resolution(
-    journey_id: str,
-    req: AddResolutionRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    journey = db.query(SentenceJourney).filter(SentenceJourney.id == journey_id).first()
-    if not journey:
-        raise HTTPException(status_code=404, detail="Journey not found")
-    if journey.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Unauthorized")
-    if journey.state != JourneyState.ACTIVE:
-        raise HTTPException(status_code=400, detail="Cannot add resolutions to inactive journey")
-
-    link_count = db.query(SentenceJourneyAssessmentLink).filter(
-        SentenceJourneyAssessmentLink.journey_id == journey_id
-    ).count()
-    if link_count == 0:
-        raise HTTPException(status_code=400, detail="Must complete clarification before adding resolutions")
-
-    resolution = ResolutionInstance(
-        id=str(uuid.uuid4()),
-        journey_id=journey_id,
-        text=req.text,
-        frequency=req.frequency,
-    )
-    db.add(resolution)
-    db.commit()
-    db.refresh(resolution)
-    return resolution
-
-
-@router.put("/{journey_id}/resolutions/{resolution_id}", response_model=ResolutionOut)
-def update_resolution(
-    journey_id: str,
-    resolution_id: str,
-    req: UpdateResolutionRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    resolution = (
-        db.query(ResolutionInstance)
-        .filter(ResolutionInstance.id == resolution_id, ResolutionInstance.journey_id == journey_id)
-        .first()
-    )
-    if not resolution:
-        raise HTTPException(status_code=404, detail="Resolution not found")
-
-    journey = db.query(SentenceJourney).filter(SentenceJourney.id == journey_id).first()
-    if journey.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Unauthorized")
-    if journey.state != JourneyState.ACTIVE:
-        raise HTTPException(status_code=400, detail="Cannot edit resolutions on inactive journey")
-
-    resolution.text = req.text
-    resolution.frequency = req.frequency
-    db.commit()
-    db.refresh(resolution)
-    return resolution
-
-
-@router.delete("/{journey_id}/resolutions/{resolution_id}")
-def delete_resolution(
-    journey_id: str,
-    resolution_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    resolution = (
-        db.query(ResolutionInstance)
-        .filter(ResolutionInstance.id == resolution_id, ResolutionInstance.journey_id == journey_id)
-        .first()
-    )
-    if not resolution:
-        raise HTTPException(status_code=404, detail="Resolution not found")
-
-    journey = db.query(SentenceJourney).filter(SentenceJourney.id == journey_id).first()
-    if journey.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Unauthorized")
-    if journey.state != JourneyState.ACTIVE:
-        raise HTTPException(status_code=400, detail="Cannot delete resolutions from inactive journey")
-
-    db.delete(resolution)
-    db.commit()
-    return {"success": True}
-
-
 @router.post("/{journey_id}/pause", response_model=JourneyOut)
 def pause_journey(
     journey_id: str,
@@ -309,7 +222,6 @@ def complete_journey(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    from ..models.models import DailyReflection
     journey = db.query(SentenceJourney).filter(SentenceJourney.id == journey_id).first()
     if not journey:
         raise HTTPException(status_code=404, detail="Journey not found")
@@ -318,11 +230,12 @@ def complete_journey(
     if journey.state != JourneyState.ACTIVE:
         raise HTTPException(status_code=400, detail="Can only complete active journeys")
 
-    reflection_count = db.query(DailyReflection).filter(
-        DailyReflection.journey_id == journey_id
-    ).count()
-    if reflection_count == 0:
-        raise HTTPException(status_code=400, detail="Cannot complete journey without at least one reflection")
+    challenge = db.query(JourneyChallenge).filter(
+        JourneyChallenge.journey_id == journey_id,
+        JourneyChallenge.status == ChallengeStatus.COMPLETED,
+    ).first()
+    if not challenge:
+        raise HTTPException(status_code=400, detail="Complete a challenge before finishing this journey")
 
     journey.state = JourneyState.COMPLETED
     db.commit()
@@ -340,7 +253,9 @@ def _get_journey_detail(journey_id: str, db: Session, current_user: User) -> Sen
             joinedload(SentenceJourney.links)
             .joinedload(SentenceJourneyAssessmentLink.assessment)
             .joinedload(LacunaAssessment.lacuna),
-            joinedload(SentenceJourney.resolutions),
+            joinedload(SentenceJourney.journey_exposures),
+            joinedload(SentenceJourney.journey_resolutions),
+            joinedload(SentenceJourney.journey_challenge),
         )
         .filter(SentenceJourney.id == journey_id)
         .first()

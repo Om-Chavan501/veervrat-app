@@ -12,7 +12,10 @@ import uuid
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from app.database import SessionLocal
-from app.models.models import Lacuna, Virtue, SubVirtue, LacunaSubVirtue, Sentence, LacunaCategory
+from app.models.models import (
+    Lacuna, Virtue, SubVirtue, LacunaSubVirtue, Sentence, LacunaCategory,
+    ExposureCatalogItem, ResolutionCatalogItem, ChallengeCatalogItem,
+)
 
 DATA_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -116,5 +119,84 @@ def seed():
         db.close()
 
 
+def seed_catalog():
+    """
+    Seed catalog items for each sentence.
+    Safe to run multiple times — skips if already populated.
+    """
+    db = SessionLocal()
+    try:
+        if db.query(ExposureCatalogItem).count() > 0:
+            print("Catalog already seeded. Skipping.")
+            return
+
+        sentences = db.query(Sentence).all()
+        if not sentences:
+            print("No sentences found — run seed() first.")
+            return
+
+        print(f"Seeding catalog for {len(sentences)} sentences...")
+
+        exposure_templates = [
+            ("Read about it", "Find and read an article, book chapter, or resource related to this virtue."),
+            ("Observe in real life", "Notice examples of this virtue (or its absence) in people around you today."),
+            ("Discuss with someone", "Talk to a trusted person about what this virtue means and where you see it practiced."),
+        ]
+        resolution_templates = [
+            ("Morning intention", "Start each day by setting a clear intention to practice this virtue.", "Daily"),
+            ("Evening reflection", "Before bed, review one moment from the day where this virtue showed up or was missing.", "Daily"),
+            ("Weekly journal entry", "Write a short journal entry about your progress with this virtue each week.", "Weekly"),
+        ]
+        challenge_templates = [
+            (
+                "Demonstrate it in a real situation",
+                "Identify one upcoming real-life situation where you can consciously apply this virtue.",
+                "Act on this virtue in a real situation at least once, then reflect on what happened.",
+            ),
+            (
+                "Teach or share it",
+                "Explain this virtue and why it matters to someone in your life.",
+                "Have a genuine conversation where you share what you've learned about this virtue.",
+            ),
+        ]
+
+        for sentence in sentences:
+            for title, description in exposure_templates:
+                db.add(ExposureCatalogItem(
+                    id=str(uuid.uuid4()),
+                    sentence_id=sentence.id,
+                    title=title,
+                    description=description,
+                ))
+            for title, description, freq_hint in resolution_templates:
+                db.add(ResolutionCatalogItem(
+                    id=str(uuid.uuid4()),
+                    sentence_id=sentence.id,
+                    title=title,
+                    description=description,
+                    frequency_hint=freq_hint,
+                ))
+            for title, description, criteria in challenge_templates:
+                db.add(ChallengeCatalogItem(
+                    id=str(uuid.uuid4()),
+                    sentence_id=sentence.id,
+                    title=title,
+                    description=description,
+                    achievement_criteria=criteria,
+                ))
+
+        db.commit()
+        total = len(sentences) * (len(exposure_templates) + len(resolution_templates) + len(challenge_templates))
+        print(f"✓ Catalog seeding complete! ({total} items)")
+
+    except Exception as e:
+        db.rollback()
+        print(f"Error during catalog seeding: {e}")
+        raise
+    finally:
+        db.close()
+
+
 if __name__ == "__main__":
     seed()
+    seed_catalog()

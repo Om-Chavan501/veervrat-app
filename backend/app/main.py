@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .database import engine, Base
-from .routers import auth, users, ontology, assessments, shortlists, journeys, reflections, exposures, vratmitra, invites
+from .routers import auth, users, ontology, assessments, shortlists, journeys, reflections, activities, vratmitra, invites
 
 settings = get_settings()
 
@@ -41,7 +41,7 @@ app.include_router(assessments.router, prefix="/api/v1")
 app.include_router(shortlists.router, prefix="/api/v1")
 app.include_router(journeys.router, prefix="/api/v1")
 app.include_router(reflections.router, prefix="/api/v1")
-app.include_router(exposures.router, prefix="/api/v1")
+app.include_router(activities.router, prefix="/api/v1")
 app.include_router(vratmitra.router, prefix="/api/v1")
 app.include_router(invites.router, prefix="/api/v1")
 
