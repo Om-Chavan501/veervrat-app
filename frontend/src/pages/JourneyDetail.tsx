@@ -4,12 +4,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
   BookOpen, Plus, Edit2, Trash2, Pause, Play, CheckCircle,
-  Eye, Users, ArrowLeft, Calendar, FileText, Lightbulb, Shield
+  Eye, Users, ArrowLeft, Calendar, FileText, Lightbulb, Shield, UserCheck
 } from 'lucide-react'
 import { journeysApi } from '../api/journeys'
 import { reflectionsApi } from '../api/reflections'
 import { exposuresApi } from '../api/exposures'
 import { vratmitraApi } from '../api/vratmitra'
+import { UserSearchCombobox } from '../components/UserSearchCombobox'
+import type { UserSearchItem } from '../api/users'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -143,7 +145,8 @@ export function JourneyDetail() {
   const [editingResolution, setEditingResolution] = useState<Resolution | undefined>()
   const [pauseModal, setPauseModal] = useState(false)
   const [pauseReason, setPauseReason] = useState('')
-  const [inviteEmail, setInviteEmail] = useState('')
+  const [selectedInviteUser, setSelectedInviteUser] = useState<UserSearchItem | null>(null)
+  const [dismissedGlobalPrompt, setDismissedGlobalPrompt] = useState(false)
   const [exposureForm, setExposureForm] = useState({ description: '', context_note: '' })
   const [resolutionForm, setResolutionForm] = useState({ text: '', frequency: '' })
 
@@ -169,6 +172,12 @@ export function JourneyDetail() {
     queryKey: ['vratmitra', journeyId],
     queryFn: () => vratmitraApi.getCurrent(journeyId!),
     enabled: !!journeyId && activeTab === 'Vratmitra',
+  })
+
+  const { data: globalVm } = useQuery({
+    queryKey: ['global-vratmitra'],
+    queryFn: vratmitraApi.getGlobal,
+    enabled: activeTab === 'Vratmitra',
   })
 
   const pauseMutation = useMutation({
@@ -238,8 +247,13 @@ export function JourneyDetail() {
     onError: (e) => toast.error(getErrorMessage(e)),
   })
   const inviteMutation = useMutation({
-    mutationFn: () => vratmitraApi.invite(journeyId!, inviteEmail),
-    onSuccess: () => { setInviteModal(false); setInviteEmail(''); toast.success('Invitation sent!') },
+    mutationFn: (inviteeId: string) => vratmitraApi.invite(journeyId!, { invitee_id: inviteeId }),
+    onSuccess: () => {
+      setInviteModal(false)
+      setSelectedInviteUser(null)
+      qc.invalidateQueries({ queryKey: ['vratmitra', journeyId] })
+      toast.success('Invitation sent!')
+    },
     onError: (e) => toast.error(getErrorMessage(e)),
   })
   const detachMutation = useMutation({
@@ -605,6 +619,30 @@ export function JourneyDetail() {
               )}
             </div>
 
+            {/* Global VM prompt */}
+            {isActive && !currentVratmitra && !dismissedGlobalPrompt && globalVm?.status === 'ACTIVE' && (
+              <Card padding="md" className="border-sage-200 bg-sage-50/50">
+                <div className="flex items-center gap-3 mb-3">
+                  <UserCheck size={16} className="text-sage-600" />
+                  <p className="text-sm font-medium text-stone-800">
+                    Continue with <span className="font-semibold">{globalVm.vratmitra?.name}</span> as Vratmitra for this journey?
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => inviteMutation.mutate(globalVm.vratmitra_id)}
+                    loading={inviteMutation.isPending}
+                  >
+                    <CheckCircle size={13} /> Yes, use them
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => setDismissedGlobalPrompt(true)}>
+                    Choose different
+                  </Button>
+                </div>
+              </Card>
+            )}
+
             {currentVratmitra ? (
               <Card padding="md">
                 <div className="flex items-center justify-between gap-3">
@@ -628,16 +666,18 @@ export function JourneyDetail() {
                 </div>
               </Card>
             ) : (
-              <EmptyState
-                icon={Users}
-                title="No active Vratmitra"
-                description="Invite someone to be your accountability mentor for this journey"
-                action={isActive ? (
-                  <Button onClick={() => setInviteModal(true)}>
-                    <Users size={14} /> Invite mentor
-                  </Button>
-                ) : undefined}
-              />
+              (!globalVm?.status || globalVm.status !== 'ACTIVE' || dismissedGlobalPrompt) && (
+                <EmptyState
+                  icon={Users}
+                  title="No active Vratmitra"
+                  description="Invite someone to be your accountability mentor for this journey"
+                  action={isActive ? (
+                    <Button onClick={() => setInviteModal(true)}>
+                      <Users size={14} /> Invite mentor
+                    </Button>
+                  ) : undefined}
+                />
+              )
             )}
           </div>
         )}
@@ -695,13 +735,25 @@ export function JourneyDetail() {
         </div>
       </Modal>
 
-      <Modal open={inviteModal} onClose={() => { setInviteModal(false); setInviteEmail('') }} title="Invite Vratmitra" description="Invite someone to be your accountability mentor">
-        <form onSubmit={(e) => { e.preventDefault(); inviteMutation.mutate() }} className="space-y-4">
-          <Input label="Email address" type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="mentor@example.com" required />
-          <Button type="submit" className="w-full" loading={inviteMutation.isPending}>
+      <Modal open={inviteModal} onClose={() => { setInviteModal(false); setSelectedInviteUser(null) }} title="Invite Vratmitra" description="Search and invite someone to be your accountability mentor">
+        <div className="space-y-4">
+          <UserSearchCombobox onSelect={setSelectedInviteUser} placeholder="Search by name or email..." />
+          {selectedInviteUser && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sage-50 border border-sage-200">
+              <UserCheck size={14} className="text-sage-600" />
+              <p className="text-sm text-stone-800 font-medium">{selectedInviteUser.name}</p>
+              <p className="text-xs text-stone-400">{selectedInviteUser.email}</p>
+            </div>
+          )}
+          <Button
+            className="w-full"
+            disabled={!selectedInviteUser}
+            loading={inviteMutation.isPending}
+            onClick={() => selectedInviteUser && inviteMutation.mutate(selectedInviteUser.id)}
+          >
             Send invitation
           </Button>
-        </form>
+        </div>
       </Modal>
     </div>
   )

@@ -62,25 +62,42 @@ Returns all journeys where the current user is an ACTIVE Vratmitra.
 ---
 
 ### POST `/api/v1/vratmitra/journeys/{journey_id}/invite`
-Sends a Vratmitra invitation by invitee email.
+Sends a Vratmitra invitation by invitee user ID or email.
 
 **Access** — journey owner only
 
 **Request**
 ```json
-{ "invitee_email": "string" }
+{ "invitee_id": "string (preferred)" }
 ```
+or
+```json
+{ "invitee_email": "string (legacy)" }
+```
+If both are provided, `invitee_id` takes precedence. At least one must be provided.
 
 **Response** `200 VratmitraOut` (status: PENDING)
 
 **Errors**
 - `404` — journey not found
 - `403` — caller is not the journey owner
-- `404` — no user found with that email
+- `404` — no user found with that email or ID
 - `400` — cannot invite yourself
 - `400` — invitation already pending for this user
 - `400` — user is already the active Vratmitra
 - `400` — journey already has an active Vratmitra
+
+#### Scenario: Invite by user ID
+- **WHEN** `POST /vratmitra/journeys/:id/invite` is called with `{ "invitee_id": "<user_id>" }`
+- **THEN** a PENDING invitation is created for the specified user
+
+#### Scenario: Invite by email still works
+- **WHEN** `POST /vratmitra/journeys/:id/invite` is called with `{ "invitee_email": "user@example.com" }`
+- **THEN** a PENDING invitation is created (existing behaviour preserved)
+
+#### Scenario: Both provided — ID takes precedence
+- **WHEN** both `invitee_id` and `invitee_email` are provided
+- **THEN** `invitee_id` is used to resolve the invitee
 
 ---
 

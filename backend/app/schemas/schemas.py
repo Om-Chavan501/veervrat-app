@@ -434,8 +434,37 @@ class VratmitraOut(BaseModel):
         from_attributes = True
 
 
+class UserSearchItem(BaseModel):
+    id: str
+    name: str
+    email: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class InviteVratmitraRequest(BaseModel):
-    invitee_email: EmailStr
+    invitee_email: Optional[EmailStr] = None
+    invitee_id: Optional[str] = None
+
+
+class GlobalVratmitraInviteRequest(BaseModel):
+    invitee_id: str
+
+
+class GlobalVratmitraOut(BaseModel):
+    id: str
+    user_id: str
+    vratmitra_id: str
+    status: VratmitraStatus
+    invited_at: Optional[datetime] = None
+    accepted_at: Optional[datetime] = None
+    detached_at: Optional[datetime] = None
+    vratmitra: Optional[UserSearchItem] = None
+    user: Optional[UserSearchItem] = None
+
+    class Config:
+        from_attributes = True
 
 
 # ─────────────────────────────────────────

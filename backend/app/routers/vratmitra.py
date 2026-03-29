@@ -1,13 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 from ..database import get_db
 from ..models.models import (
     User, SentenceJourney, JourneyVratmitra, VratmitraStatus,
-    Sentence, SubVirtue, Virtue
+    Sentence, SubVirtue, Virtue, UserVratmitra
 )
-from ..schemas.schemas import VratmitraOut, InviteVratmitraRequest
+from ..schemas.schemas import (
+    VratmitraOut, InviteVratmitraRequest,
+    GlobalVratmitraInviteRequest, GlobalVratmitraOut,
+)
 from ..auth.dependencies import get_current_user
 import uuid
 
@@ -65,9 +68,16 @@ def invite_vratmitra(
     if journey.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Only journey owner can invite Vratmitra")
 
-    invitee = db.query(User).filter(User.email == req.invitee_email).first()
-    if not invitee:
-        raise HTTPException(status_code=404, detail="User with this email not found")
+    if req.invitee_id:
+        invitee = db.query(User).filter(User.id == req.invitee_id).first()
+        if not invitee:
+            raise HTTPException(status_code=404, detail="User not found")
+    elif req.invitee_email:
+        invitee = db.query(User).filter(User.email == req.invitee_email).first()
+        if not invitee:
+            raise HTTPException(status_code=404, detail="User with this email not found")
+    else:
+        raise HTTPException(status_code=400, detail="Either invitee_id or invitee_email is required")
     if invitee.id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot invite yourself as Vratmitra")
 
@@ -181,3 +191,108 @@ def get_active_vratmitra(
         )
         .first()
     )
+
+
+# ─────────────────────────────────────────
+# GLOBAL VRATMITRA
+# ─────────────────────────────────────────
+
+@router.post("/global", response_model=GlobalVratmitraOut)
+def invite_global_vratmitra(
+    req: GlobalVratmitraInviteRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if req.invitee_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot invite yourself as Global Vratmitra")
+
+    invitee = db.query(User).filter(User.id == req.invitee_id).first()
+    if not invitee:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    existing = db.query(UserVratmitra).filter(
+        UserVratmitra.user_id == current_user.id,
+        UserVratmitra.status.in_([VratmitraStatus.PENDING, VratmitraStatus.ACTIVE]),
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="You already have a pending or active Global Vratmitra")
+
+    record = UserVratmitra(
+        id=str(uuid.uuid4()),
+        user_id=current_user.id,
+        vratmitra_id=req.invitee_id,
+        status=VratmitraStatus.PENDING,
+        invited_at=datetime.utcnow(),
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@router.get("/global", response_model=GlobalVratmitraOut | None)
+def get_global_vratmitra(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(UserVratmitra)
+        .options(joinedload(UserVratmitra.vratmitra))
+        .filter(
+            UserVratmitra.user_id == current_user.id,
+            UserVratmitra.status.in_([VratmitraStatus.PENDING, VratmitraStatus.ACTIVE]),
+        )
+        .first()
+    )
+
+
+@router.get("/global/pending", response_model=List[GlobalVratmitraOut])
+def get_global_pending_invitations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(UserVratmitra)
+        .options(joinedload(UserVratmitra.user))
+        .filter(
+            UserVratmitra.vratmitra_id == current_user.id,
+            UserVratmitra.status == VratmitraStatus.PENDING,
+        )
+        .order_by(UserVratmitra.invited_at.desc())
+        .all()
+    )
+
+
+@router.post("/global/accept", response_model=GlobalVratmitraOut)
+def accept_global_invitation(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(UserVratmitra).filter(
+        UserVratmitra.vratmitra_id == current_user.id,
+        UserVratmitra.status == VratmitraStatus.PENDING,
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="No pending Global Vratmitra invitation found")
+
+    record.status = VratmitraStatus.ACTIVE
+    record.accepted_at = datetime.utcnow()
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@router.delete("/global", status_code=204)
+def remove_global_vratmitra(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(UserVratmitra).filter(
+        (UserVratmitra.user_id == current_user.id) | (UserVratmitra.vratmitra_id == current_user.id),
+        UserVratmitra.status.in_([VratmitraStatus.PENDING, VratmitraStatus.ACTIVE]),
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="No active Global Vratmitra relationship found")
+
+    db.delete(record)
+    db.commit()

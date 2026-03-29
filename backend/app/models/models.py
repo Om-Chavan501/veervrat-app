@@ -77,6 +77,8 @@ class User(Base):
     vratmitra_links = relationship("JourneyVratmitra", back_populates="user")
     reflection_comments = relationship("ReflectionComment", back_populates="user")
     invite = relationship("UserInvite", back_populates="user", uselist=False)
+    global_vratmitra_sent = relationship("UserVratmitra", foreign_keys="UserVratmitra.user_id", back_populates="user", uselist=False)
+    global_vratmitra_received = relationship("UserVratmitra", foreign_keys="UserVratmitra.vratmitra_id", back_populates="vratmitra")
 
 
 class UserInvite(Base):
@@ -303,6 +305,24 @@ class SentenceJourneyAssessmentLink(Base):
 # ─────────────────────────────────────────
 # VRATMITRA ATTACHMENT
 # ─────────────────────────────────────────
+
+class UserVratmitra(Base):
+    """Global Vratmitra relationship — one trusted mentor across all journeys."""
+    __tablename__ = "user_vratmitras"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)       # inviter
+    vratmitra_id = Column(String, ForeignKey("users.id"), nullable=False)  # invitee
+    status = Column(SAEnum(VratmitraStatus), nullable=False, default=VratmitraStatus.PENDING)
+    invited_at = Column(DateTime, default=datetime.utcnow)
+    accepted_at = Column(DateTime, nullable=True)
+    detached_at = Column(DateTime, nullable=True)
+
+    user = relationship("User", foreign_keys=[user_id], back_populates="global_vratmitra_sent")
+    vratmitra = relationship("User", foreign_keys=[vratmitra_id], back_populates="global_vratmitra_received")
+
+    __table_args__ = (UniqueConstraint("user_id"),)
+
 
 class JourneyVratmitra(Base):
     __tablename__ = "journey_vratmitras"
