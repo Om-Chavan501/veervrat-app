@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
   BookOpen, Plus, Pause, Play, CheckCircle,
-  Eye, Users, ArrowLeft, Calendar, Lightbulb, Shield, UserCheck, Target
+  Eye, Users, ArrowLeft, Calendar, Lightbulb, Shield, UserCheck
 } from 'lucide-react'
 import { journeysApi } from '../api/journeys'
 import { reflectionsApi } from '../api/reflections'

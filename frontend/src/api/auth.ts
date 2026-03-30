@@ -2,7 +2,7 @@ import { api } from './client'
 import type { TokenResponse, User } from '../types'
 
 export const authApi = {
-  register: (data: { name: string; email: string; password: string; confirm_password: string }) =>
+  register: (data: { name: string; email: string; password: string; confirm_password: string; invite_code?: string }) =>
     api.post<TokenResponse>('/auth/register', data).then((r) => r.data),
 
   login: (data: { email: string; password: string }) =>
