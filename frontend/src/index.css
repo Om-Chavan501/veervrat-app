@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+:root.dark {
+  --color-night-bg:      #1a1410;
+  --color-night-surface: #231c17;
+  --color-night-raised:  #2c2218;
+  --color-night-border:  #3d3028;
+  --color-night-text:    #ede8e0;
+  --color-night-muted:   #8b8576;
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -23,8 +32,8 @@
   }
 
   .dark body {
-    background-color: theme('colors.stone.950');
-    color: theme('colors.stone.100');
+    background-color: var(--color-night-bg);
+    color: var(--color-night-text);
   }
 
   ::selection {
@@ -58,6 +67,16 @@
 }
 
 @layer components {
+  /* Night Forest dark mode surface helpers */
+  .dark .dark-surface {
+    background-color: var(--color-night-surface);
+    border-color: var(--color-night-border);
+  }
+  .dark .dark-raised {
+    background-color: var(--color-night-raised);
+    border-color: var(--color-night-border);
+  }
+
   /* Sticky page section that bleeds full-width out of padded container */
   .sticky-section {
     position: sticky;
@@ -141,6 +160,6 @@
   }
 
   .dark .glass {
-    background-color: rgba(28, 25, 23, 0.92);
+    background-color: rgba(26, 20, 16, 0.93);
   }
 }

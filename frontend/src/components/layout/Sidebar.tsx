@@ -34,9 +34,9 @@ export function Sidebar() {
   }
 
   return (<>
-    <aside className="hidden lg:flex flex-col w-60 bg-white dark:bg-stone-900 border-r border-warm-200 dark:border-stone-700 h-screen sticky top-0 z-30 flex-shrink-0">
+    <aside className="hidden lg:flex flex-col w-60 bg-white dark:bg-[#231c17] border-r border-warm-200 dark:border-[#3d3028] h-screen sticky top-0 z-30 flex-shrink-0">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-warm-100 dark:border-stone-800">
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-warm-100 dark:border-[#3d3028]">
         <div className="w-8 h-8 rounded-xl bg-sage-500 flex items-center justify-center">
           <Sprout className="w-4.5 h-4.5 text-white" size={16} />
         </div>
@@ -59,15 +59,15 @@ export function Sidebar() {
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
                 isActive
-                  ? 'bg-sage-50 dark:bg-sage-900/30 text-sage-700 dark:text-sage-400'
-                  : 'text-stone-500 dark:text-stone-400 hover:bg-warm-50 dark:hover:bg-stone-800 hover:text-stone-700 dark:hover:text-stone-200'
+                  ? 'bg-sage-50 dark:bg-sage-900/20 text-sage-700 dark:text-sage-300'
+                  : 'text-stone-500 dark:text-[#8b8576] hover:bg-warm-50 dark:hover:bg-[#2c2218] hover:text-stone-700 dark:hover:text-[#ede8e0]'
               )}
             >
               <Icon
                 size={17}
                 className={cn(
                   'flex-shrink-0 transition-colors',
-                  isActive ? 'text-sage-600 dark:text-sage-400' : 'text-stone-400 dark:text-stone-500'
+                  isActive ? 'text-sage-600 dark:text-sage-300' : 'text-stone-400 dark:text-[#8b8576]'
                 )}
               />
               {label}
@@ -82,7 +82,7 @@ export function Sidebar() {
         <button
           onClick={toggleTheme}
           title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-stone-500 dark:text-stone-400 hover:bg-warm-50 dark:hover:bg-stone-800 transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-stone-500 dark:text-[#8b8576] hover:bg-warm-50 dark:hover:bg-[#2c2218] transition-colors"
         >
           {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
           {theme === 'dark' ? 'Light' : 'Dark'}
@@ -90,7 +90,7 @@ export function Sidebar() {
         <button
           onClick={() => setLang(lang === 'mr' ? 'en' : 'mr')}
           title="Toggle language"
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-stone-500 dark:text-stone-400 hover:bg-warm-50 dark:hover:bg-stone-800 transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-stone-500 dark:text-[#8b8576] hover:bg-warm-50 dark:hover:bg-[#2c2218] transition-colors"
         >
           <Languages size={14} />
           {lang === 'mr' ? 'EN' : 'मराठी'}
@@ -101,31 +101,31 @@ export function Sidebar() {
       <div className="px-2.5 pb-2">
         <button
           onClick={() => setInviteOpen(true)}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-stone-500 dark:text-stone-400 hover:bg-warm-50 dark:hover:bg-stone-800 hover:text-stone-700 dark:hover:text-stone-200 transition-colors"
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-stone-500 dark:text-[#8b8576] hover:bg-warm-50 dark:hover:bg-[#2c2218] hover:text-stone-700 dark:hover:text-[#ede8e0] transition-colors"
         >
-          <Share2 size={16} className="text-stone-400 dark:text-stone-500" />
+          <Share2 size={16} className="text-stone-400 dark:text-[#8b8576]" />
           {t('invite.inviteCta')}
         </button>
       </div>
 
       {/* User */}
-      <div className="px-2.5 py-3 border-t border-warm-100 dark:border-stone-800">
-        <div className="flex items-center gap-3 px-3 py-2.5 mb-1 rounded-xl hover:bg-warm-50 dark:hover:bg-stone-800 transition-colors">
-          <div className="w-8 h-8 rounded-full bg-sage-100 dark:bg-sage-900/40 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-bold text-sage-700 dark:text-sage-400">
+      <div className="px-2.5 py-3 border-t border-warm-100 dark:border-[#3d3028]">
+        <div className="flex items-center gap-3 px-3 py-2.5 mb-1 rounded-xl hover:bg-warm-50 dark:hover:bg-[#2c2218] transition-colors">
+          <div className="w-8 h-8 rounded-full bg-sage-100 dark:bg-sage-900/30 flex items-center justify-center flex-shrink-0">
+            <span className="text-sm font-bold text-sage-700 dark:text-sage-300">
               {user?.name?.[0]?.toUpperCase() ?? '?'}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-stone-800 dark:text-stone-100 truncate">{user?.name}</p>
-            <p className="text-xs text-stone-400 dark:text-stone-500 truncate">{user?.email}</p>
+            <p className="text-sm font-semibold text-stone-800 dark:text-[#ede8e0] truncate">{user?.name}</p>
+            <p className="text-xs text-stone-400 dark:text-[#8b8576] truncate">{user?.email}</p>
           </div>
         </div>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-stone-500 dark:text-stone-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors"
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-stone-500 dark:text-[#8b8576] hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"
         >
-          <LogOut size={15} className="text-stone-400 dark:text-stone-500" />
+          <LogOut size={15} className="text-stone-400 dark:text-[#8b8576]" />
           {t('nav.signOut')}
         </button>
       </div>

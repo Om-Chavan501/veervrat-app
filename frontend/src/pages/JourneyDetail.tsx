@@ -285,7 +285,7 @@ export function JourneyDetail() {
   if (challengeDone) completedPhases.add('practice')
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-enter">
       <button
         onClick={() => navigate(-1)}
         className="flex items-center gap-1.5 text-sm text-stone-400 hover:text-stone-700 transition-colors mb-4"
@@ -307,8 +307,8 @@ export function JourneyDetail() {
             <Badge variant={stateBadge[journey.state]}>{journey.state}</Badge>
           </span>
         </div>
-        <p className="text-base font-bold text-stone-800 leading-snug mb-1">{journey.sentence?.text_en}</p>
-        <p className="text-sm text-stone-400 italic mb-3">{journey.sentence?.text_mr}</p>
+        <p className="font-serif text-xl font-semibold text-stone-800 dark:text-[#ede8e0] leading-relaxed mb-2">{journey.sentence?.text_en}</p>
+        <p className="font-serif text-base text-stone-500 dark:text-[#8b8576] italic mb-3">{journey.sentence?.text_mr}</p>
 
         <div className="flex items-center justify-between gap-3 flex-wrap pt-3 border-t border-warm-100">
           <p className="text-xs text-stone-400">
@@ -352,7 +352,7 @@ export function JourneyDetail() {
 
       {/* ── SETUP PHASE ── */}
       {activePhase === 'setup' && (
-        <div className="space-y-4 animate-fade-in">
+        <div className="space-y-4 animate-enter">
           {/* Clarification card */}
           <ClarificationSetupCard
             journeyId={journeyId!}
@@ -480,7 +480,7 @@ export function JourneyDetail() {
 
       {/* ── PRACTICE PHASE ── */}
       {activePhase === 'practice' && (
-        <div className="animate-fade-in">
+        <div className="animate-enter">
           {/* Practice sub-tabs */}
           <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 glass border-b border-warm-200 shadow-sticky mb-5">
             <div className="flex gap-0 overflow-x-auto no-scrollbar py-1">
@@ -644,7 +644,7 @@ export function JourneyDetail() {
 
       {/* ── CHALLENGE PHASE ── */}
       {activePhase === 'challenge' && (
-        <div className="space-y-4 animate-fade-in">
+        <div className="space-y-4 animate-enter">
           <ChallengeCard
             challenge={journey.journey_challenge}
             editable={isActive}

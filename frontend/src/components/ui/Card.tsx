@@ -9,7 +9,7 @@ export function Card({ className, padding = 'md', children, ...props }: CardProp
   return (
     <div
       className={cn(
-        'bg-white dark:bg-stone-900 rounded-xl border border-warm-200 dark:border-stone-700 shadow-sm',
+        'bg-white dark:bg-[#231c17] rounded-xl border border-warm-200 dark:border-[#3d3028] shadow-sm transition-all duration-300 hover:shadow-card-hover hover:-translate-y-0.5',
         paddings[padding],
         className
       )}
@@ -22,7 +22,7 @@ export function Card({ className, padding = 'md', children, ...props }: CardProp
 
 export function CardHeader({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('mb-4 pb-4 border-b border-warm-100 dark:border-stone-800', className)} {...props}>
+    <div className={cn('mb-4 pb-4 border-b border-warm-100 dark:border-[#3d3028]', className)} {...props}>
       {children}
     </div>
   )

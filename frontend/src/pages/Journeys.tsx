@@ -42,7 +42,7 @@ export function Journeys() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-enter">
       <div>
         <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">{t('journeys.title')}</h1>
         <p className="text-stone-500 dark:text-stone-400 mt-1 text-sm">
@@ -74,11 +74,12 @@ export function Journeys() {
 
       {journeys && journeys.length > 0 ? (
         <div className="space-y-2.5">
-          {journeys.map((journey) => {
+          {journeys.map((journey, i) => {
             const config = stateConfig[journey.state]
+            const staggerDelay = ['delay-[0ms]','delay-[75ms]','delay-[150ms]','delay-[225ms]','delay-[300ms]','delay-[375ms]']
             return (
-              <Link key={journey.id} to={`/journeys/${journey.id}`}>
-                <div className="bg-white dark:bg-stone-900 rounded-2xl border border-warm-200 dark:border-stone-700 p-4 hover:border-sage-200 hover:shadow-card-hover transition-all cursor-pointer group flex items-start gap-3.5">
+              <Link key={journey.id} to={`/journeys/${journey.id}`} className={`block animate-enter ${staggerDelay[Math.min(i, 5)]}`}>
+                <div className="bg-white dark:bg-[#231c17] rounded-2xl border border-warm-200 dark:border-[#3d3028] p-4 hover:border-sage-200 dark:hover:border-sage-800 hover:shadow-card-hover transition-all cursor-pointer group flex items-start gap-3.5">
                   <div className="flex-shrink-0 mt-1.5">
                     <div className={`w-2 h-2 rounded-full ${config.dot}`} />
                   </div>
@@ -98,7 +99,7 @@ export function Journeys() {
                         </span>
                       </div>
                     )}
-                    <p className="text-sm font-semibold text-stone-800 dark:text-stone-100 leading-snug mb-1.5">
+                    <p className="font-serif text-base text-stone-800 dark:text-[#ede8e0] leading-snug mb-1.5">
                       {lang === 'mr' ? journey.sentence?.text_mr : journey.sentence?.text_en}
                     </p>
                     <div className="flex items-center gap-2 flex-wrap">

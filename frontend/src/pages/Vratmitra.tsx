@@ -91,7 +91,7 @@ export function Vratmitra() {
   if (pendingLoading || mentoredLoading || globalLoading) return <PageLoader />
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-enter">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-stone-800">{t('vratmitra.title')}</h1>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useCountUp } from '../hooks/useCountUp'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Route, BookOpen, ClipboardList, Users, ArrowRight, Plus, Bell, TrendingUp, Sparkles, Share2 } from 'lucide-react'
@@ -17,17 +18,18 @@ import { formatDistanceToNow } from 'date-fns'
 function StatCard({ label, value, icon: Icon, bgColor, iconColor, to }: {
   label: string; value: number; icon: React.ElementType; bgColor: string; iconColor: string; to: string
 }) {
+  const displayed = useCountUp(value, 600)
   return (
     <Link to={to}>
-      <div className={`relative rounded-2xl p-5 border border-white/60 overflow-hidden cursor-pointer group transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5 ${bgColor}`}>
+      <div className={`relative rounded-2xl p-5 border border-white/60 dark:border-white/5 overflow-hidden cursor-pointer group transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5 ${bgColor}`}>
         <div className="flex items-start justify-between mb-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/40 group-hover:bg-white/60 transition-colors">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/40 dark:bg-black/20 group-hover:bg-white/60 dark:group-hover:bg-black/30 transition-colors">
             <Icon size={18} className={iconColor} />
           </div>
           <ArrowRight size={14} className={`${iconColor} opacity-0 group-hover:opacity-60 transition-opacity mt-1`} />
         </div>
-        <p className="text-2xl font-bold text-stone-800 mb-0.5">{value}</p>
-        <p className="text-xs font-medium text-stone-600">{label}</p>
+        <p className="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-0.5">{displayed}</p>
+        <p className="text-xs font-medium text-stone-600 dark:text-stone-400">{label}</p>
       </div>
     </Link>
   )
@@ -41,7 +43,7 @@ function JourneyCard({ journey, lang }: { journey: Journey; lang: string }) {
           <Route size={15} className="text-sage-600 dark:text-sage-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-stone-800 dark:text-stone-100 line-clamp-1 leading-snug">
+          <p className="font-serif text-sm text-stone-800 dark:text-[#ede8e0] line-clamp-2 leading-snug">
             {lang === 'mr' ? journey.sentence?.text_mr : journey.sentence?.text_en}
           </p>
           <div className="flex items-center gap-2 mt-1">
@@ -126,7 +128,7 @@ export function Dashboard() {
   ]
 
   return (
-    <div className="space-y-7 animate-fade-in">
+    <div className="space-y-7 animate-enter">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">
@@ -145,10 +147,10 @@ export function Dashboard() {
 
       {stats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard label={t('dashboard.activeJourneys')} value={stats.active_journeys} icon={Route} bgColor="bg-sage-100" iconColor="text-sage-600" to="/journeys" />
-          <StatCard label={t('dashboard.reflections')} value={stats.total_reflections} icon={BookOpen} bgColor="bg-terra-100" iconColor="text-terra-600" to="/journeys" />
-          <StatCard label={t('dashboard.completed')} value={stats.completed_journeys} icon={TrendingUp} bgColor="bg-blue-100" iconColor="text-blue-600" to="/archive" />
-          <StatCard label={t('dashboard.invitations')} value={stats.pending_invitations} icon={Users} bgColor="bg-amber-100" iconColor="text-amber-600" to="/vratmitra" />
+          <StatCard label={t('dashboard.activeJourneys')} value={stats.active_journeys} icon={Route} bgColor="bg-sage-100 dark:bg-sage-900/40" iconColor="text-sage-600 dark:text-sage-400" to="/journeys" />
+          <StatCard label={t('dashboard.reflections')} value={stats.total_reflections} icon={BookOpen} bgColor="bg-terra-100 dark:bg-[#3a2218]" iconColor="text-terra-600 dark:text-terra-400" to="/journeys" />
+          <StatCard label={t('dashboard.completed')} value={stats.completed_journeys} icon={TrendingUp} bgColor="bg-blue-100 dark:bg-blue-950/60" iconColor="text-blue-600 dark:text-blue-400" to="/archive" />
+          <StatCard label={t('dashboard.invitations')} value={stats.pending_invitations} icon={Users} bgColor="bg-amber-100 dark:bg-amber-950/50" iconColor="text-amber-600 dark:text-amber-400" to="/vratmitra" />
         </div>
       )}
 
@@ -161,14 +163,19 @@ export function Dashboard() {
         </div>
 
         {activeJourneys && activeJourneys.length > 0 ? (
-          <div className="rounded-2xl bg-white dark:bg-stone-900 border border-warm-200 dark:border-stone-700 shadow-card overflow-hidden">
-            <div className="divide-y divide-warm-100 dark:divide-stone-800">
-              {activeJourneys.slice(0, 5).map((j) => (
-                <JourneyCard key={j.id} journey={j} lang={lang} />
-              ))}
+          <div className="rounded-2xl bg-white dark:bg-[#231c17] border border-warm-200 dark:border-[#3d3028] shadow-card overflow-hidden">
+            <div className="divide-y divide-warm-100 dark:divide-[#3d3028]">
+              {activeJourneys.slice(0, 5).map((j, i) => {
+                const staggerDelay = ['delay-[0ms]','delay-[75ms]','delay-[150ms]','delay-[225ms]','delay-[300ms]']
+                return (
+                  <div key={j.id} className={`animate-enter ${staggerDelay[i]}`}>
+                    <JourneyCard journey={j} lang={lang} />
+                  </div>
+                )
+              })}
             </div>
             {activeJourneys.length > 5 && (
-              <div className="px-4 py-3 bg-warm-50 dark:bg-stone-800 border-t border-warm-100 dark:border-stone-700">
+              <div className="px-4 py-3 bg-warm-50 dark:bg-[#2c2218] border-t border-warm-100 dark:border-[#3d3028]">
                 <Link to="/journeys" className="text-sm text-sage-600 dark:text-sage-400 font-medium hover:text-sage-700 flex items-center gap-1">
                   {t('dashboard.viewAll').replace('{count}', String(activeJourneys.length))}
                   <ArrowRight size={14} />

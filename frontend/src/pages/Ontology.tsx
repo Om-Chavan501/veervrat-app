@@ -29,7 +29,7 @@ export function Ontology() {
   if (isLoading) return <PageLoader />
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-enter">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-stone-800">Ontology</h1>

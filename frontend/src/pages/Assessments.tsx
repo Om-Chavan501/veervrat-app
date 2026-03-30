@@ -21,7 +21,7 @@ export function Assessments() {
   if (isLoading) return <PageLoader />
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-enter">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">{t('assessments.title')}</h1>
@@ -39,11 +39,12 @@ export function Assessments() {
         />
       ) : (
         <div className="space-y-3">
-          {assessments.map((a) => (
-            <Card
+          {assessments.map((a, i) => {
+            const delays = ['delay-[0ms]','delay-[75ms]','delay-[150ms]','delay-[225ms]','delay-[300ms]','delay-[375ms]']
+            return <Card
               key={a.id}
               padding="md"
-              className="cursor-pointer hover:shadow-sm transition-shadow"
+              className={`cursor-pointer hover:shadow-sm transition-shadow animate-enter ${delays[Math.min(i, 5)]}`}
               onClick={() => navigate(a.status === 'COMPLETED' ? `/assessment-results/${a.id}` : `/assessments/${a.id}`)}
             >
               <div className="flex items-center justify-between gap-3">
@@ -65,7 +66,7 @@ export function Assessments() {
                 <ChevronRight size={16} className="text-stone-400 flex-shrink-0" />
               </div>
             </Card>
-          ))}
+          })}
         </div>
       )}
     </div>

@@ -39,11 +39,12 @@ export function ExposureList({ items, editable, onStatusChange, onDelete }: Expo
               <p className="text-xs text-stone-500 mt-0.5 leading-relaxed">{item.description}</p>
             )}
             <button
+              key={item.status}
               type="button"
               disabled={!editable}
               onClick={() => editable && onStatusChange?.(item.id, nextStatus(item.status))}
               className={cn(
-                'mt-1.5 inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border transition-all',
+                'mt-1.5 inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border transition-all animate-status-pop',
                 exposureStatusStyle[item.status],
                 editable && 'cursor-pointer hover:opacity-80',
                 !editable && 'cursor-default',
@@ -104,11 +105,12 @@ export function ResolutionList({ items, editable, onStatusChange, onDelete }: Re
             <div className="flex items-center gap-2 mt-1.5">
               <Badge variant="muted">{item.frequency}</Badge>
               <button
+                key={item.status}
                 type="button"
                 disabled={!editable}
                 onClick={() => editable && onStatusChange?.(item.id, nextStatus(item.status))}
                 className={cn(
-                  'inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border transition-all',
+                  'inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border transition-all animate-status-pop',
                   resolutionStatusStyle[item.status],
                   editable && 'cursor-pointer hover:opacity-80',
                   !editable && 'cursor-default',

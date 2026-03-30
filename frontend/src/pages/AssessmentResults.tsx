@@ -83,10 +83,10 @@ function RatingSection({
                       : <Square size={17} className="text-stone-300 dark:text-stone-600" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-stone-800 dark:text-stone-100 leading-relaxed">
+                    <p className="font-serif text-sm text-stone-800 dark:text-[#ede8e0] leading-relaxed">
                       {lang === 'mr' ? sentence.text_mr : sentence.text_en}
                     </p>
-                    <p className="text-xs text-stone-400 dark:text-stone-500 italic mt-0.5">
+                    <p className="font-serif text-xs text-stone-400 dark:text-[#8b8576] italic mt-0.5">
                       {lang === 'mr' ? sentence.text_en : sentence.text_mr}
                     </p>
                   </div>
@@ -230,10 +230,10 @@ export function AssessmentResults() {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm font-semibold text-stone-800 dark:text-stone-100 leading-relaxed mb-1">
+                    <p className="font-serif text-base text-stone-800 dark:text-[#ede8e0] leading-relaxed mb-1">
                       {lang === 'mr' ? snap.sentence?.text_mr : snap.sentence?.text_en}
                     </p>
-                    <p className="text-xs text-stone-400 italic mb-2">
+                    <p className="font-serif text-sm text-stone-400 dark:text-[#8b8576] italic mb-2">
                       {lang === 'mr' ? snap.sentence?.text_en : snap.sentence?.text_mr}
                     </p>
                     <p className="text-xs text-stone-400 dark:text-stone-500">{snap.reason}</p>
